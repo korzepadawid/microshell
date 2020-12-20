@@ -1,8 +1,10 @@
 #include <errno.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -23,6 +25,7 @@ int execute(char *args[]);
 /*Helpers*/
 
 const char *path();
+const char *user();
 void parse_args(char *args[], char command[], int *args_count);
 
 int main()
@@ -35,7 +38,7 @@ int main()
         int args_count = 0;
         char command[BUFFER];
 
-        printf("[%s] \n$ ", path());
+        printf("[%s:%s] \n$ ", user(), path());
         fgets(command, sizeof command, stdin);
         parse_args(args, command, &args_count);
 
@@ -69,6 +72,19 @@ int main()
     }
 
     exit(EXIT_SUCCESS);
+}
+
+const char *user()
+{
+    register uid_t uid = geteuid();
+    register struct passwd *pw = getpwuid(uid);
+    if (pw == NULL)
+    {
+        perror("cannot get username");
+        exit(errno);
+    }
+
+    return pw->pw_name;
 }
 
 const char *path()
