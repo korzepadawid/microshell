@@ -74,6 +74,8 @@ int main()
     exit(EXIT_SUCCESS);
 }
 
+/*Helpers*/
+
 const char *user()
 {
     register uid_t uid = geteuid();
@@ -112,6 +114,8 @@ void parse_args(char *args[], char command[], int *args_count)
     args[i] = NULL;
     *args_count = i - 1;
 }
+
+/*Shell programs*/
 
 void clear()
 {
