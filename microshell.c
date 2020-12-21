@@ -19,6 +19,7 @@
 #define PS "ps"
 
 #define BUFFER 1024
+#define COLUMN_FORMAT "%-9s %s \n"
 
 /**
 * Shell programs
@@ -142,42 +143,47 @@ void ps()
     regex_t regex;
     struct dirent *entry;
     char procbuf[BUFFER];
-    int regex_status;
+    int regex_status, pid;
 
     regex_status = regcomp(&regex, "^[0-9]*$", 0);
 
     if (regex_status)
     {
+        perror("regex error");
         exit(errno);
     }
 
-    if ((dir = opendir("/proc/")) == NULL)
+    if ((pid = fork()) == 0)
     {
-        perror("/proc/ error");
-        exit(errno);
-    }
-    else
-    {
-        printf("%-9s %s \n", "pid", "cmdline");
-        while ((entry = readdir(dir)) != NULL)
+        if ((dir = opendir("/proc/")) == NULL)
         {
-            regex_status = regexec(&regex, entry->d_name, 0, NULL, 0);
-            if (!regex_status)
-            {
-                char pid[BUFFER], cmdline[BUFFER];
-                strcpy(pid, entry->d_name);
-                strcpy(procbuf, "/proc/");
-
-                strcat(procbuf, entry->d_name);
-                strcat(procbuf, "/cmdline");
-
-                file = fopen(procbuf, "r");
-                fgets(cmdline, BUFFER, file);
-                printf("%-9s %s \n", pid, cmdline);
-            }
+            perror("/proc/ error");
+            exit(errno);
         }
-        closedir(dir);
+        else
+        {
+            printf(COLUMN_FORMAT, "pid", "cmdline");
+            while ((entry = readdir(dir)) != NULL)
+            {
+                regex_status = regexec(&regex, entry->d_name, 0, NULL, 0);
+                if (!regex_status)
+                {
+                    char pid[BUFFER], cmdline[BUFFER];
+                    strcpy(pid, entry->d_name);
+                    strcpy(procbuf, "/proc/");
+
+                    strcat(procbuf, entry->d_name);
+                    strcat(procbuf, "/cmdline");
+
+                    file = fopen(procbuf, "r");
+                    fgets(cmdline, BUFFER, file);
+                    printf(COLUMN_FORMAT, pid, cmdline);
+                }
+            }
+            closedir(dir);
+        }
     }
+    wait(NULL);
     regfree(&regex);
 }
 
@@ -239,9 +245,10 @@ void help()
     printf("|_______/  \\______/ |__/  |__/|________/|________/|________/\n");
     printf("\n\n");
     printf("Developed by Dawid Korzepa © 2021\n\n");
-    printf("clear  \t\tThere will be a cool info.\n");
-    printf("help   \t\tThere will be a cool info.\n");
-    printf("exit   \t\tThere will be a cool info.\n");
-    printf("cd     \t\tThere will be a cool info.\n");
+    printf(COLUMN_FORMAT, "clear", "There will be a cool info.");
+    printf(COLUMN_FORMAT, "help", "There will be a cool info.");
+    printf(COLUMN_FORMAT, "exit", "There will be a cool info.");
+    printf(COLUMN_FORMAT, "cd", "There will be a cool info.");
+    printf(COLUMN_FORMAT, "ps", "There will be a cool info.");
     printf("\n\n");
 }
