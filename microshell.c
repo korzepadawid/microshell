@@ -1,9 +1,13 @@
+#include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
+#include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/procfs.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -12,17 +16,23 @@
 #define HELP "help"
 #define CLEAR "clear"
 #define CD "cd"
+#define PS "ps"
 
-#define BUFFER 256
+#define BUFFER 1024
 
-/*Shell programs*/
+/**
+* Shell programs
+*/
 
 void help();
 void clear();
+void ps();
 void cd(char *args[]);
 int execute(char *args[]);
 
-/*Helpers*/
+/**
+* Helpers
+*/
 
 const char *path();
 const char *user();
@@ -62,6 +72,10 @@ int main()
         {
             cd(args);
         }
+        else if (strcmp(args[0], PS) == 0)
+        {
+            ps();
+        }
         else
         {
             if (execute(args) < 0)
@@ -74,7 +88,9 @@ int main()
     exit(EXIT_SUCCESS);
 }
 
-/*Helpers*/
+/**
+* Helpers
+*/
 
 const char *user()
 {
@@ -115,7 +131,55 @@ void parse_args(char *args[], char command[], int *args_count)
     *args_count = i - 1;
 }
 
-/*Shell programs*/
+/**
+* Shell programs
+*/
+
+void ps()
+{
+    DIR *dir;
+    FILE *file;
+    regex_t regex;
+    struct dirent *entry;
+    char procbuf[BUFFER];
+    int regex_status;
+
+    regex_status = regcomp(&regex, "^[0-9]*$", 0);
+
+    if (regex_status)
+    {
+        exit(errno);
+    }
+
+    if ((dir = opendir("/proc/")) == NULL)
+    {
+        perror("/proc/ error");
+        exit(errno);
+    }
+    else
+    {
+        printf("%-9s %s \n", "pid", "cmdline");
+        while ((entry = readdir(dir)) != NULL)
+        {
+            regex_status = regexec(&regex, entry->d_name, 0, NULL, 0);
+            if (!regex_status)
+            {
+                char pid[BUFFER], cmdline[BUFFER];
+                strcpy(pid, entry->d_name);
+                strcpy(procbuf, "/proc/");
+
+                strcat(procbuf, entry->d_name);
+                strcat(procbuf, "/cmdline");
+
+                file = fopen(procbuf, "r");
+                fgets(cmdline, BUFFER, file);
+                printf("%-9s %s \n", pid, cmdline);
+            }
+        }
+        closedir(dir);
+    }
+    regfree(&regex);
+}
 
 void clear()
 {
