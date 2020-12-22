@@ -17,6 +17,7 @@
 #define CLEAR "clear"
 #define CD "cd"
 #define PS "ps"
+#define MV "mv"
 
 #define BUFFER 1024
 #define COLUMN_FORMAT "%-9s %s \n"
@@ -28,7 +29,8 @@
 void help();
 void clear();
 void ps();
-void cd(char *args[]);
+void mv(char *args[], int args_count);
+void cd(char *args[], int args_count);
 int execute(char *args[]);
 
 /**
@@ -45,10 +47,9 @@ int main()
     while (true)
     {
 
+        char command[BUFFER];
         char *args[BUFFER];
         int args_count = 0;
-        char command[BUFFER];
-
         printf("[%s:%s] \n$ ", user(), path());
         fgets(command, sizeof command, stdin);
         parse_args(args, command, &args_count);
@@ -69,21 +70,26 @@ int main()
         {
             clear();
         }
-        else if (strcmp(args[0], CD) == 0)
-        {
-            cd(args);
-        }
         else if (strcmp(args[0], PS) == 0)
         {
             ps();
+        }
+        else if (strcmp(args[0], CD) == 0)
+        {
+            cd(args, args_count);
+        }
+        else if (strcmp(args[0], MV) == 0)
+        {
+            mv(args, args_count);
         }
         else
         {
             if (execute(args) < 0)
             {
-                printf("%s, type help if you got lost. \n", strerror(errno));
+                fprintf(stderr, "%s, type help if you got lost.\n", strerror(errno));
             }
         }
+        strcpy(command, "");
     }
 
     exit(EXIT_SUCCESS);
@@ -99,8 +105,8 @@ const char *user()
     register struct passwd *pw = getpwuid(uid);
     if (pw == NULL)
     {
-        perror("cannot get username");
-        exit(errno);
+        fprintf(stderr, "cannot get username.\n");
+        exit(EXIT_FAILURE);
     }
 
     return pw->pw_name;
@@ -112,8 +118,8 @@ const char *path()
     getcwd(current_path, sizeof current_path);
     if (current_path == NULL)
     {
-        perror("cannot get current path");
-        exit(errno);
+        fprintf(stderr, "cannot get path.\n");
+        exit(EXIT_FAILURE);
     }
     return current_path;
 }
@@ -136,6 +142,58 @@ void parse_args(char *args[], char command[], int *args_count)
 * Shell programs
 */
 
+void mv(char *args[], int args_count)
+{
+    char *file = args[1];
+    char *location = args[2];
+    char newplace[BUFFER];
+
+    if (args_count != 2)
+    {
+        fprintf(stderr, "Wrong format, use mv <target> <destination>\n");
+        return;
+    }
+    else
+    {
+        if (location[0] == '/')
+        {
+            strcat(location, "/");
+            strcat(location, file);
+
+            if (rename(file, location) != 0)
+            {
+                fprintf(stderr, "Unknwon destination\n");
+                return;
+            }
+        }
+        else
+        {
+            DIR *isD;
+            isD = opendir(location);
+
+            if (isD == NULL && rename(file, location) != 0)
+            {
+                fprintf(stderr, "Something went wrong...\n");
+                return;
+            }
+            else
+            {
+                char *ptrL;
+                ptrL = getcwd(newplace, 50);
+                strcat(newplace, "/");
+                strcat(newplace, location);
+                strcat(newplace, file);
+                if (rename(file, ptrL) == -1)
+                {
+                    fprintf(stderr, "No such file or directory\n");
+                    return;
+                }
+                closedir(isD);
+            }
+        }
+    }
+}
+
 void ps()
 {
     DIR *dir;
@@ -143,47 +201,44 @@ void ps()
     regex_t regex;
     struct dirent *entry;
     char procbuf[BUFFER];
-    int regex_status, pid;
+    int regex_error;
 
-    regex_status = regcomp(&regex, "^[0-9]*$", 0);
+    regex_error = regcomp(&regex, "^[0-9]*$", 0);
 
-    if (regex_status)
+    if (regex_error)
     {
-        perror("regex error");
-        exit(errno);
+        fprintf(stderr, "regex error.\n");
+        exit(EXIT_FAILURE);
     }
 
-    if ((pid = fork()) == 0)
+    if ((dir = opendir("/proc/")) == NULL)
     {
-        if ((dir = opendir("/proc/")) == NULL)
+        fprintf(stderr, "/proc/ error \n");
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        printf(COLUMN_FORMAT, "PID", "CMD");
+        while ((entry = readdir(dir)) != NULL)
         {
-            perror("/proc/ error");
-            exit(errno);
-        }
-        else
-        {
-            printf(COLUMN_FORMAT, "pid", "cmdline");
-            while ((entry = readdir(dir)) != NULL)
+            regex_error = regexec(&regex, entry->d_name, 0, NULL, 0);
+            if (!regex_error)
             {
-                regex_status = regexec(&regex, entry->d_name, 0, NULL, 0);
-                if (!regex_status)
-                {
-                    char pid[BUFFER], cmdline[BUFFER];
-                    strcpy(pid, entry->d_name);
-                    strcpy(procbuf, "/proc/");
+                char pid[BUFFER], cmdline[BUFFER];
+                strcpy(pid, entry->d_name);
+                strcpy(procbuf, "/proc/");
 
-                    strcat(procbuf, entry->d_name);
-                    strcat(procbuf, "/cmdline");
+                strcat(procbuf, entry->d_name);
+                strcat(procbuf, "/cmdline");
 
-                    file = fopen(procbuf, "r");
-                    fgets(cmdline, BUFFER, file);
-                    printf(COLUMN_FORMAT, pid, cmdline);
-                }
+                file = fopen(procbuf, "r");
+                fgets(cmdline, BUFFER, file);
+
+                printf(COLUMN_FORMAT, pid, cmdline);
             }
-            closedir(dir);
         }
+        closedir(dir);
     }
-    wait(NULL);
     regfree(&regex);
 }
 
@@ -192,23 +247,24 @@ void clear()
     printf("\e[1;1H\e[2J");
 }
 
-void cd(char *args[])
+void cd(char *args[], int args_count)
 {
-    if (args[1] == NULL)
+
+    if (args_count >= 2)
     {
-        chdir(".");
+        fprintf(stderr, "Wrong format, use cd <folder>\n");
+    }
+    else if (args[1] == NULL || strcmp(args[1], "~") == 0)
+    {
+        chdir(getenv("HOME"));
     }
     else if (strcmp(args[1], "..") == 0)
     {
         chdir("..");
     }
-    else if (strcmp(args[1], "~") == 0)
-    {
-        chdir(getenv("HOME"));
-    }
     else if (chdir(args[1]) == -1)
     {
-        printf("Fatal error: %s\n", strerror(errno));
+        fprintf(stderr, "Fatal error %s\n", strerror(errno));
     }
     else
     {
@@ -233,17 +289,13 @@ int execute(char *args[])
 void help()
 {
     printf("\e[1;1H\e[2J");
-    printf("\n");
-    printf(" /$$$$$$$   /$$$$$$  /$$   /$$ /$$$$$$$$ /$$       /$$      \n");
-    printf("| $$__  $$ /$$__  $$| $$  | $$| $$_____/| $$      | $$      \n");
-    printf("| $$  \\ $$| $$  \\__/| $$  | $$| $$      | $$      | $$      \n");
-    printf("| $$  | $$|  $$$$$$ | $$$$$$$$| $$$$$   | $$      | $$      \n");
-    printf("| $$  | $$ \\____  $$| $$__  $$| $$__/   | $$      | $$      \n");
-    printf("| $$  | $$ /$$  \\ $$| $$  | $$| $$      | $$      | $$      \n");
-    printf("| $$  | $$ /$$  \\ $$| $$  | $$| $$      | $$      | $$      \n");
-    printf("| $$$$$$$/|  $$$$$$/| $$  | $$| $$$$$$$$| $$$$$$$$| $$$$$$$$\n");
-    printf("|_______/  \\______/ |__/  |__/|________/|________/|________/\n");
-    printf("\n\n");
+    printf("######     #    #     # ### ######     #    # ####### ######  ####### ####### ######     #    \n");
+    printf("#     #   # #   #  #  #  #  #     #    #   #  #     # #     #      #  #       #     #   # #   \n");
+    printf("#     #  #   #  #  #  #  #  #     #    #  #   #     # #     #     #   #       #     #  #   #  \n");
+    printf("#     # #     # #  #  #  #  #     #    ###    #     # ######     #    #####   ######  #     # \n");
+    printf("#     # ####### #  #  #  #  #     #    #  #   #     # #   #     #     #       #       ####### \n");
+    printf("#     # #     # #  #  #  #  #     #    #   #  #     # #    #   #      #       #       #     # \n");
+    printf("######  #     #  ## ##  ### ######     #    # ####### #     # ####### ####### #       #     # \n\n");
     printf("Developed by Dawid Korzepa © 2021\n\n");
     printf(COLUMN_FORMAT, "clear", "There will be a cool info.");
     printf(COLUMN_FORMAT, "help", "There will be a cool info.");
