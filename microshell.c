@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
 #include <pwd.h>
 #include <regex.h>
 #include <stdbool.h>
@@ -8,8 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/procfs.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 #define EXIT "exit"
@@ -17,10 +20,13 @@
 #define CLEAR "clear"
 #define CD "cd"
 #define PS "ps"
-#define MV "mv"
+#define LS "ls"
 
 #define BUFFER 1024
-#define COLUMN_FORMAT "%-9s %s \n"
+
+#define PS_FORMAT "%-9s %s \n"
+#define HELP_FORMAT "%-9s %s \n"
+#define LS_FORMAT "%-10s %-6s %-6s %-6s %-6s %-18s %s\n"
 
 /**
 * Shell programs
@@ -29,8 +35,8 @@
 void help();
 void clear();
 void ps();
-void mv(char *args[], int args_count);
 void cd(char *args[], int args_count);
+void ls(char *args[], int args_count);
 int execute(char *args[]);
 
 /**
@@ -39,6 +45,7 @@ int execute(char *args[]);
 
 const char *path();
 const char *user();
+char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
 
 int main()
@@ -78,9 +85,9 @@ int main()
         {
             cd(args, args_count);
         }
-        else if (strcmp(args[0], MV) == 0)
+        else if (strcmp(args[0], LS) == 0)
         {
-            mv(args, args_count);
+            ls(args, args_count);
         }
         else
         {
@@ -124,6 +131,30 @@ const char *path()
     return current_path;
 }
 
+char *substring(char *string, int position, int length)
+{
+    char *p;
+    int c;
+
+    p = malloc(length + 1);
+
+    if (p == NULL)
+    {
+        printf("Unable to allocate memory.\n");
+        exit(1);
+    }
+
+    for (c = 0; c < length; c++)
+    {
+        *(p + c) = *(string + position - 1);
+        string++;
+    }
+
+    *(p + c) = '\0';
+
+    return p;
+}
+
 void parse_args(char *args[], char command[], int *args_count)
 {
     int i = 0;
@@ -142,56 +173,59 @@ void parse_args(char *args[], char command[], int *args_count)
 * Shell programs
 */
 
-void mv(char *args[], int args_count)
+void ls(char *args[], int args_count)
 {
-    char *file = args[1];
-    char *location = args[2];
-    char newplace[BUFFER];
+    DIR *dir;
+    struct dirent *file;
+    struct stat file_meta;
+    register struct passwd *pw;
+    register struct group *gwd;
 
-    if (args_count != 2)
+    if (args_count > 1)
     {
-        fprintf(stderr, "Wrong format, use mv <target> <destination>\n");
+        fprintf(stderr, "Wrong format, use ls <path>.\n");
         return;
     }
-    else
+
+    if ((dir = opendir(args[1] == NULL ? path() : args[1])) == NULL)
     {
-        if (location[0] == '/')
-        {
-            strcat(location, "/");
-            strcat(location, file);
-
-            if (rename(file, location) != 0)
-            {
-                fprintf(stderr, "Unknwon destination\n");
-                return;
-            }
-        }
-        else
-        {
-            DIR *isD;
-            isD = opendir(location);
-
-            if (isD == NULL && rename(file, location) != 0)
-            {
-                fprintf(stderr, "Something went wrong...\n");
-                return;
-            }
-            else
-            {
-                char *ptrL;
-                ptrL = getcwd(newplace, 50);
-                strcat(newplace, "/");
-                strcat(newplace, location);
-                strcat(newplace, file);
-                if (rename(file, ptrL) == -1)
-                {
-                    fprintf(stderr, "No such file or directory\n");
-                    return;
-                }
-                closedir(isD);
-            }
-        }
+        fprintf(stderr, "Unknown path.\n");
+        return;
     }
+
+    stat(args[1] == NULL ? path() : args[1], &file_meta);
+
+    printf(LS_FORMAT, "access", "links", "size", "group", "user", "date", "filename");
+
+    while ((file = readdir(dir)) != NULL)
+    {
+        stat(file->d_name, &file_meta);
+
+        printf((S_ISDIR(file_meta.st_mode)) ? "d" : "-");
+
+        printf((file_meta.st_mode & S_IRUSR) ? "r" : "-");
+        printf((file_meta.st_mode & S_IWUSR) ? "w" : "-");
+        printf((file_meta.st_mode & S_IXUSR) ? "x" : "-");
+        printf((file_meta.st_mode & S_IRGRP) ? "r" : "-");
+        printf((file_meta.st_mode & S_IWGRP) ? "w" : "-");
+        printf((file_meta.st_mode & S_IXGRP) ? "x" : "-");
+        printf((file_meta.st_mode & S_IROTH) ? "r" : "-");
+        printf((file_meta.st_mode & S_IWOTH) ? "w" : "-");
+        printf((file_meta.st_mode & S_IXOTH) ? "x" : "-");
+
+        pw = getpwuid(file_meta.st_uid);
+        gwd = getgrgid(file_meta.st_gid);
+
+        printf(" ");
+        printf("%-6ld ", file_meta.st_nlink);
+        printf("%-6ld ", file_meta.st_size);
+        printf("%-6s ", gwd->gr_name);
+        printf("%-6s ", pw->pw_name);
+        printf("%-18s ", substring(ctime(&file_meta.st_mtime), 5, 16));
+        printf("%s\n", file->d_name);
+    }
+
+    closedir(dir);
 }
 
 void ps()
@@ -218,7 +252,7 @@ void ps()
     }
     else
     {
-        printf(COLUMN_FORMAT, "PID", "CMD");
+        printf(PS_FORMAT, "PID", "CMD");
         while ((entry = readdir(dir)) != NULL)
         {
             regex_error = regexec(&regex, entry->d_name, 0, NULL, 0);
@@ -234,7 +268,7 @@ void ps()
                 file = fopen(procbuf, "r");
                 fgets(cmdline, BUFFER, file);
 
-                printf(COLUMN_FORMAT, pid, cmdline);
+                printf(PS_FORMAT, pid, cmdline);
             }
         }
         closedir(dir);
@@ -297,10 +331,11 @@ void help()
     printf("#     # #     # #  #  #  #  #     #    #   #  #     # #    #   #      #       #       #     # \n");
     printf("######  #     #  ## ##  ### ######     #    # ####### #     # ####### ####### #       #     # \n\n");
     printf("Developed by Dawid Korzepa © 2021\n\n");
-    printf(COLUMN_FORMAT, "clear", "There will be a cool info.");
-    printf(COLUMN_FORMAT, "help", "There will be a cool info.");
-    printf(COLUMN_FORMAT, "exit", "There will be a cool info.");
-    printf(COLUMN_FORMAT, "cd", "There will be a cool info.");
-    printf(COLUMN_FORMAT, "ps", "There will be a cool info.");
+    printf(HELP_FORMAT, "clear", "There will be a cool info.");
+    printf(HELP_FORMAT, "help", "There will be a cool info.");
+    printf(HELP_FORMAT, "exit", "There will be a cool info.");
+    printf(HELP_FORMAT, "cd", "There will be a cool info.");
+    printf(HELP_FORMAT, "ps", "There will be a cool info.");
+    printf(HELP_FORMAT, "ls", "There will be a cool info.");
     printf("\n\n");
 }
