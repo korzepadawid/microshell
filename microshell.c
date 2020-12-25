@@ -24,7 +24,7 @@
 
 #define PS_FORMAT "%-9s %s \n"
 #define HELP_FORMAT "%-9s %s \n"
-#define LS_FORMAT "%-10s %-6s %-6s %-6s %-6s %-18s %s\n"
+#define LS_FORMAT "%-10s %-6s %-6s %-15s %-15s %-18s %s\n"
 
 #define MAX_BRANCH_NAME 40
 #define BUFFER 1024
@@ -220,8 +220,8 @@ void ls(char *args[], int args_count)
         printf(" ");
         printf("%-6ld ", file_meta.st_nlink);
         printf("%-6ld ", file_meta.st_size);
-        printf("%-6s ", gwd->gr_name);
-        printf("%-6s ", pw->pw_name);
+        printf("%-15s ", gwd->gr_name);
+        printf("%-15s ", pw->pw_name);
         printf("%-18s ", substring(ctime(&file_meta.st_mtime), 5, 16));
         printf("%s\n", file->d_name);
     }
