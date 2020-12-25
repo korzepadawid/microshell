@@ -22,11 +22,12 @@
 #define PS "ps"
 #define LS "ls"
 
-#define BUFFER 1024
-
 #define PS_FORMAT "%-9s %s \n"
 #define HELP_FORMAT "%-9s %s \n"
 #define LS_FORMAT "%-10s %-6s %-6s %-6s %-6s %-18s %s\n"
+
+#define MAX_BRANCH_NAME 40
+#define BUFFER 1024
 
 /**
 * Shell programs
@@ -57,7 +58,7 @@ int main()
         char command[BUFFER];
         char *args[BUFFER];
         int args_count = 0;
-        printf("[%s:%s] \n$ ", user(), path());
+        printf("[%s:%s]\n$ ", user(), path());
         fgets(command, sizeof command, stdin);
         parse_args(args, command, &args_count);
 
