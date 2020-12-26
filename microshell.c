@@ -22,11 +22,23 @@
 #define PS "ps"
 #define LS "ls"
 
+#define RED "\x1B[31m"
+#define GRN "\x1B[32m"
+#define YEL "\x1B[33m"
+#define BLU "\x1B[34m"
+#define MAG "\x1B[35m"
+#define HCYN "\e[0;96m"
+#define HMAG "\e[1;35m"
+#define BHMAG "\e[1;95m"
+#define WHT "\x1B[37m"
+#define GREY "\x1B[90m"
+#define ORN "\033[48:5:208:0m%s\033[m\n"
+#define RESET "\x1B[0m"
+
 #define PS_FORMAT "%-9s %s \n"
 #define HELP_FORMAT "%-9s %s \n"
 #define LS_FORMAT "%-10s %-6s %-6s %-15s %-15s %-18s %s\n"
 
-#define MAX_BRANCH_NAME 40
 #define BUFFER 1024
 
 /**
@@ -48,6 +60,7 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
+void print_prompt();
 
 int main()
 {
@@ -58,7 +71,7 @@ int main()
         char command[BUFFER];
         char *args[BUFFER];
         int args_count = 0;
-        printf("[%s:%s]\n$ ", user(), path());
+        print_prompt();
         fgets(command, sizeof command, stdin);
         parse_args(args, command, &args_count);
 
@@ -94,7 +107,7 @@ int main()
         {
             if (execute(args) < 0)
             {
-                fprintf(stderr, "%s, type help if you got lost.\n", strerror(errno));
+                fprintf(stderr, RED "%s, type help if you got lost.\n" RESET, strerror(errno));
             }
         }
         strcpy(command, "");
@@ -170,6 +183,16 @@ void parse_args(char *args[], char command[], int *args_count)
     *args_count = i - 1;
 }
 
+void print_prompt()
+{
+    printf(GREY "[" RESET);
+    printf(BHMAG "%s" RESET, user());
+    printf(GREY ":" RESET);
+    printf(HCYN "%s" RESET, path());
+    printf(GREY "]" RESET);
+    printf(GREY "\n$ " RESET);
+}
+
 /**
 * Shell programs
 */
@@ -184,19 +207,19 @@ void ls(char *args[], int args_count)
 
     if (args_count > 1)
     {
-        fprintf(stderr, "Wrong format, use ls <path>.\n");
+        fprintf(stderr, RED "Wrong format, use ls <path>.\n" RESET);
         return;
     }
 
     if ((dir = opendir(args[1] == NULL ? path() : args[1])) == NULL)
     {
-        fprintf(stderr, "Unknown path.\n");
+        fprintf(stderr, RED "Unknown path.\n" RESET);
         return;
     }
 
     stat(args[1] == NULL ? path() : args[1], &file_meta);
 
-    printf(LS_FORMAT, "access", "links", "size", "group", "user", "date", "filename");
+    printf(GRN LS_FORMAT RESET, "access", "links", "size", "group", "user", "date", "filename");
 
     while ((file = readdir(dir)) != NULL)
     {
@@ -242,18 +265,18 @@ void ps()
 
     if (regex_error)
     {
-        fprintf(stderr, "regex error.\n");
+        fprintf(stderr, RED "regex error.\n" RESET);
         exit(EXIT_FAILURE);
     }
 
     if ((dir = opendir("/proc/")) == NULL)
     {
-        fprintf(stderr, "/proc/ error \n");
+        fprintf(stderr, RED "/proc/ error \n" RESET);
         exit(EXIT_FAILURE);
     }
     else
     {
-        printf(PS_FORMAT, "PID", "CMD");
+        printf(BLU PS_FORMAT RESET, "PID", "CMD");
         while ((entry = readdir(dir)) != NULL)
         {
             regex_error = regexec(&regex, entry->d_name, 0, NULL, 0);
@@ -287,7 +310,7 @@ void cd(char *args[], int args_count)
 
     if (args_count >= 2)
     {
-        fprintf(stderr, "Wrong format, use cd <folder>\n");
+        fprintf(stderr, RED "Wrong format, use cd <folder>\n" RESET);
     }
     else if (args[1] == NULL || strcmp(args[1], "~") == 0)
     {
@@ -299,7 +322,7 @@ void cd(char *args[], int args_count)
     }
     else if (chdir(args[1]) == -1)
     {
-        fprintf(stderr, "Fatal error %s\n", strerror(errno));
+        fprintf(stderr, RED "Fatal error %s\n" RESET, strerror(errno));
     }
     else
     {
@@ -324,19 +347,21 @@ int execute(char *args[])
 void help()
 {
     printf("\e[1;1H\e[2J");
-    printf("######     #    #     # ### ######     #    # ####### ######  ####### ####### ######     #    \n");
-    printf("#     #   # #   #  #  #  #  #     #    #   #  #     # #     #      #  #       #     #   # #   \n");
-    printf("#     #  #   #  #  #  #  #  #     #    #  #   #     # #     #     #   #       #     #  #   #  \n");
-    printf("#     # #     # #  #  #  #  #     #    ###    #     # ######     #    #####   ######  #     # \n");
-    printf("#     # ####### #  #  #  #  #     #    #  #   #     # #   #     #     #       #       ####### \n");
-    printf("#     # #     # #  #  #  #  #     #    #   #  #     # #    #   #      #       #       #     # \n");
-    printf("######  #     #  ## ##  ### ######     #    # ####### #     # ####### ####### #       #     # \n\n");
-    printf("Developed by Dawid Korzepa © 2021\n\n");
-    printf(HELP_FORMAT, "clear", "There will be a cool info.");
-    printf(HELP_FORMAT, "help", "There will be a cool info.");
-    printf(HELP_FORMAT, "exit", "There will be a cool info.");
-    printf(HELP_FORMAT, "cd", "There will be a cool info.");
-    printf(HELP_FORMAT, "ps", "There will be a cool info.");
-    printf(HELP_FORMAT, "ls", "There will be a cool info.");
+    printf(GRN);
+    printf("##################################################################\n");
+    printf("#                                                                #\n");
+    printf("#                                                                #\n");
+    printf("#                                                                #\n");
+    printf("#                                                                #\n");
+    printf("#                                                                #\n");
+    printf("##################################################################\n\n");
+    printf(RESET);
+    printf(RED "Developed by Dawid Korzepa © 2021\n\n" RESET);
+    printf(BLU HELP_FORMAT RESET, "clear", "There will be a cool info.");
+    printf(BLU HELP_FORMAT RESET, "help", "There will be a cool info.");
+    printf(BLU HELP_FORMAT RESET, "exit", "There will be a cool info.");
+    printf(BLU HELP_FORMAT RESET, "cd", "There will be a cool info.");
+    printf(BLU HELP_FORMAT RESET, "ps", "There will be a cool info.");
+    printf(BLU HELP_FORMAT RESET, "ls", "There will be a cool info.");
     printf("\n\n");
 }
