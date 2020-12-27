@@ -24,15 +24,8 @@
 
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
-#define YEL "\x1B[33m"
-#define BLU "\x1B[34m"
-#define MAG "\x1B[35m"
 #define HCYN "\e[0;96m"
-#define HMAG "\e[1;35m"
-#define BHMAG "\e[1;95m"
-#define WHT "\x1B[37m"
 #define GREY "\x1B[90m"
-#define ORN "\033[48:5:208:0m%s\033[m\n"
 #define RESET "\x1B[0m"
 
 #define PS_FORMAT "%-9s %s \n"
@@ -186,7 +179,7 @@ void parse_args(char *args[], char command[], int *args_count)
 void print_prompt()
 {
     printf(GREY "[" RESET);
-    printf(BHMAG "%s" RESET, user());
+    printf(RED "%s" RESET, user());
     printf(GREY ":" RESET);
     printf(HCYN "%s" RESET, path());
     printf(GREY "]" RESET);
@@ -276,7 +269,7 @@ void ps()
     }
     else
     {
-        printf(BLU PS_FORMAT RESET, "PID", "CMD");
+        printf(GRN PS_FORMAT RESET, "PID", "CMD");
         while ((entry = readdir(dir)) != NULL)
         {
             regex_error = regexec(&regex, entry->d_name, 0, NULL, 0);
@@ -357,11 +350,11 @@ void help()
     printf("##################################################################\n\n");
     printf(RESET);
     printf(RED "Developed by Dawid Korzepa © 2021\n\n" RESET);
-    printf(BLU HELP_FORMAT RESET, "clear", "There will be a cool info.");
-    printf(BLU HELP_FORMAT RESET, "help", "There will be a cool info.");
-    printf(BLU HELP_FORMAT RESET, "exit", "There will be a cool info.");
-    printf(BLU HELP_FORMAT RESET, "cd", "There will be a cool info.");
-    printf(BLU HELP_FORMAT RESET, "ps", "There will be a cool info.");
-    printf(BLU HELP_FORMAT RESET, "ls", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "clear", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "help", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "exit", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "cd", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "ps", "There will be a cool info.");
+    printf(GRN HELP_FORMAT RESET, "ls", "There will be a cool info.");
     printf("\n\n");
 }
