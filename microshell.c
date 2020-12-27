@@ -2,7 +2,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <history.h>
 #include <pwd.h>
+#include <readline.h>
 #include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -53,20 +55,27 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
-void print_prompt();
 
 int main()
 {
     clear();
+    char *input, shell_prompt[BUFFER];
+    rl_bind_key('\t', rl_complete);
     while (true)
     {
 
-        char command[BUFFER];
         char *args[BUFFER];
         int args_count = 0;
-        print_prompt();
-        fgets(command, sizeof command, stdin);
-        parse_args(args, command, &args_count);
+
+        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, RED, user(), GREY, HCYN, path(), GREY, RESET);
+        input = readline(shell_prompt);
+
+        parse_args(args, input, &args_count);
+
+        if (args[0] != NULL)
+        {
+            add_history(input);
+        }
 
         if (args[0] == NULL)
         {
@@ -103,7 +112,7 @@ int main()
                 fprintf(stderr, RED "%s, type help if you got lost.\n" RESET, strerror(errno));
             }
         }
-        strcpy(command, "");
+        free(input);
     }
 
     exit(EXIT_SUCCESS);
@@ -174,16 +183,6 @@ void parse_args(char *args[], char command[], int *args_count)
     }
     args[i] = NULL;
     *args_count = i - 1;
-}
-
-void print_prompt()
-{
-    printf(GREY "[" RESET);
-    printf(RED "%s" RESET, user());
-    printf(GREY ":" RESET);
-    printf(HCYN "%s" RESET, path());
-    printf(GREY "]" RESET);
-    printf(GREY "\n$ " RESET);
 }
 
 /**
