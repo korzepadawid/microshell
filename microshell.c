@@ -24,6 +24,7 @@
 #define PS "ps"
 #define LS "ls"
 
+#define YEL "\e[0;33m"
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
 #define HCYN "\e[0;96m"
@@ -67,7 +68,7 @@ int main()
         char *args[BUFFER];
         int args_count = 0;
 
-        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, RED, user(), GREY, HCYN, path(), GREY, RESET);
+        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, YEL, user(), GREY, HCYN, path(), GREY, RESET);
         input = readline(shell_prompt);
 
         parse_args(args, input, &args_count);
