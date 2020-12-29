@@ -1,39 +1,32 @@
 #include <dirent.h>
 #include <errno.h>
-#include <fcntl.h>
-#include <grp.h>
 #include <history.h>
+#include <libgen.h>
 #include <pwd.h>
 #include <readline.h>
-#include <regex.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/procfs.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
 
 #define EXIT "exit"
 #define HELP "help"
 #define CLEAR "clear"
-#define CD "cd"
-#define PS "ps"
-#define LS "ls"
+#define MOVE "mv"
+#define CHANGE_DIR "cd"
 
-#define YEL "\e[0;33m"
+#define MAG "\e[0;35m"
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
 #define HCYN "\e[0;96m"
 #define GREY "\x1B[90m"
 #define RESET "\x1B[0m"
 
-#define PS_FORMAT "%-9s %s \n"
 #define HELP_FORMAT "%-9s %s \n"
-#define LS_FORMAT "%-10s %-6s %-6s %-15s %-15s %-18s %s\n"
 
 #define BUFFER 1024
 
@@ -43,9 +36,8 @@
 
 void help();
 void clear();
-void ps();
-void cd(char *args[], int args_count);
-void ls(char *args[], int args_count);
+void move(char *args[], int args_count);
+void change_dir(char *args[], int args_count);
 int execute(char *args[]);
 
 /**
@@ -64,19 +56,16 @@ int main()
     rl_bind_key('\t', rl_complete);
     while (true)
     {
-
         char *args[BUFFER];
         int args_count = 0;
 
-        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, YEL, user(), GREY, HCYN, path(), GREY, RESET);
+        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, MAG, user(), GREY, HCYN, path(), GREY, RESET);
         input = readline(shell_prompt);
-
-        parse_args(args, input, &args_count);
-
-        if (args[0] != NULL)
+        if (input != NULL)
         {
             add_history(input);
         }
+        parse_args(args, input, &args_count);
 
         if (args[0] == NULL)
         {
@@ -94,17 +83,13 @@ int main()
         {
             clear();
         }
-        else if (strcmp(args[0], PS) == 0)
+        else if (strcmp(args[0], MOVE) == 0)
         {
-            ps();
+            move(args, args_count);
         }
-        else if (strcmp(args[0], CD) == 0)
+        else if (strcmp(args[0], CHANGE_DIR) == 0)
         {
-            cd(args, args_count);
-        }
-        else if (strcmp(args[0], LS) == 0)
-        {
-            ls(args, args_count);
+            change_dir(args, args_count);
         }
         else
         {
@@ -176,121 +161,73 @@ void parse_args(char *args[], char command[], int *args_count)
 {
     int i = 0;
     char *temp;
-    temp = strtok(command, " \n\t");
+    temp = strtok(command, " \'\n\t");
     while (temp != NULL)
     {
         args[i++] = temp;
-        temp = strtok(NULL, " \n\t");
+        temp = strtok(NULL, " \'\n\t");
     }
     args[i] = NULL;
-    *args_count = i - 1;
+    *args_count = i;
 }
 
 /**
 * Shell programs
 */
 
-void ls(char *args[], int args_count)
+void move(char *args[], int args_count)
 {
-    DIR *dir;
-    struct dirent *file;
-    struct stat file_meta;
-    register struct passwd *pw;
-    register struct group *gwd;
-
-    if (args_count > 1)
+    if (args_count != 3)
     {
-        fprintf(stderr, RED "Wrong format, use ls <path>.\n" RESET);
+        fprintf(stderr, RED "Wrong format, use mv <source> <destination>\n" RESET);
         return;
     }
 
-    if ((dir = opendir(args[1] == NULL ? path() : args[1])) == NULL)
+    char *source = args[1], *destination = args[2], destination_path[BUFFER];
+
+    if (destination[0] == '/')
     {
-        fprintf(stderr, RED "Unknown path.\n" RESET);
-        return;
+        strcat(destination, "/");
+        strcat(destination, source);
+        if ((rename(source, destination)) != 0)
+        {
+            fprintf(stderr, RED "Unknown path\n" RESET);
+        }
     }
-
-    stat(args[1] == NULL ? path() : args[1], &file_meta);
-
-    printf(GRN LS_FORMAT RESET, "access", "links", "size", "group", "user", "date", "filename");
-
-    while ((file = readdir(dir)) != NULL)
+    else if (strcmp(destination, ".") == 0)
     {
-        stat(file->d_name, &file_meta);
-
-        printf((S_ISDIR(file_meta.st_mode)) ? "d" : "-");
-
-        printf((file_meta.st_mode & S_IRUSR) ? "r" : "-");
-        printf((file_meta.st_mode & S_IWUSR) ? "w" : "-");
-        printf((file_meta.st_mode & S_IXUSR) ? "x" : "-");
-        printf((file_meta.st_mode & S_IRGRP) ? "r" : "-");
-        printf((file_meta.st_mode & S_IWGRP) ? "w" : "-");
-        printf((file_meta.st_mode & S_IXGRP) ? "x" : "-");
-        printf((file_meta.st_mode & S_IROTH) ? "r" : "-");
-        printf((file_meta.st_mode & S_IWOTH) ? "w" : "-");
-        printf((file_meta.st_mode & S_IXOTH) ? "x" : "-");
-
-        pw = getpwuid(file_meta.st_uid);
-        gwd = getgrgid(file_meta.st_gid);
-
-        printf(" ");
-        printf("%-6ld ", file_meta.st_nlink);
-        printf("%-6ld ", file_meta.st_size);
-        printf("%-15s ", gwd->gr_name);
-        printf("%-15s ", pw->pw_name);
-        printf("%-18s ", substring(ctime(&file_meta.st_mtime), 5, 16));
-        printf("%s\n", file->d_name);
-    }
-
-    closedir(dir);
-}
-
-void ps()
-{
-    DIR *dir;
-    FILE *file;
-    regex_t regex;
-    struct dirent *entry;
-    char procbuf[BUFFER];
-    int regex_error;
-
-    regex_error = regcomp(&regex, "^[0-9]*$", 0);
-
-    if (regex_error)
-    {
-        fprintf(stderr, RED "regex error.\n" RESET);
-        exit(EXIT_FAILURE);
-    }
-
-    if ((dir = opendir("/proc/")) == NULL)
-    {
-        fprintf(stderr, RED "/proc/ error \n" RESET);
-        exit(EXIT_FAILURE);
+        strcpy(destination_path, path());
+        strcat(destination_path, "/");
+        strcat(destination_path, basename(source));
+        if ((rename(source, destination_path)) != 0)
+        {
+            fprintf(stderr, RED "Unknown path\n" RESET);
+        }
     }
     else
     {
-        printf(GRN PS_FORMAT RESET, "PID", "CMD");
-        while ((entry = readdir(dir)) != NULL)
+        DIR *dir;
+        if ((dir = opendir(destination)) == NULL)
         {
-            regex_error = regexec(&regex, entry->d_name, 0, NULL, 0);
-            if (!regex_error)
+            if ((rename(source, destination)) != 0)
             {
-                char pid[BUFFER], cmdline[BUFFER];
-                strcpy(pid, entry->d_name);
-                strcpy(procbuf, "/proc/");
-
-                strcat(procbuf, entry->d_name);
-                strcat(procbuf, "/cmdline");
-
-                file = fopen(procbuf, "r");
-                fgets(cmdline, BUFFER, file);
-
-                printf(PS_FORMAT, pid, cmdline);
+                fprintf(stderr, RED "An error occurred\n" RESET);
+            }
+        }
+        else
+        {
+            char *current_location = getcwd(destination_path, sizeof(destination_path));
+            strcat(destination_path, "/");
+            strcat(destination_path, destination);
+            strcat(destination_path, "/");
+            strcat(destination_path, source);
+            if ((rename(source, current_location)) != 0)
+            {
+                fprintf(stderr, RED "Unknown directory\n" RESET);
             }
         }
         closedir(dir);
     }
-    regfree(&regex);
 }
 
 void clear()
@@ -298,12 +235,13 @@ void clear()
     printf("\e[1;1H\e[2J");
 }
 
-void cd(char *args[], int args_count)
+void change_dir(char *args[], int args_count)
 {
 
-    if (args_count >= 2)
+    if (args_count > 2)
     {
         fprintf(stderr, RED "Wrong format, use cd <folder>\n" RESET);
+        return;
     }
     else if (args[1] == NULL || strcmp(args[1], "~") == 0)
     {
@@ -316,6 +254,7 @@ void cd(char *args[], int args_count)
     else if (chdir(args[1]) == -1)
     {
         fprintf(stderr, RED "Fatal error %s\n" RESET, strerror(errno));
+        return;
     }
     else
     {
