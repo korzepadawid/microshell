@@ -52,19 +52,20 @@ void parse_args(char *args[], char command[], int *args_count);
 int main()
 {
     clear();
-    char *input, shell_prompt[BUFFER];
+    char *input;
     rl_bind_key('\t', rl_complete);
     while (true)
     {
         char *args[BUFFER];
         int args_count = 0;
+        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, MAG, user(), GREY, HCYN, path(), GREY, RESET);
+        input = readline("$ ");
 
-        sprintf(shell_prompt, "%s[%s%s%s:%s%s%s]\n$ %s", GREY, MAG, user(), GREY, HCYN, path(), GREY, RESET);
-        input = readline(shell_prompt);
         if (input != NULL)
         {
             add_history(input);
         }
+
         parse_args(args, input, &args_count);
 
         if (args[0] == NULL)
