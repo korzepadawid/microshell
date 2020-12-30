@@ -188,14 +188,12 @@ void parse_args(char *args[], char command[], int *args_count)
     *args_count = i;
 }
 
-int strpos(char *hay, char *needle, int offset)
+int index_of(char *a, char *b, int start)
 {
-    char haystack[strlen(hay)];
-    strncpy(haystack, hay + offset, strlen(hay) - offset);
-    char *p = strstr(haystack, needle);
-    if (p)
-        return p - haystack + offset;
-    return -1;
+    char temp[strlen(a)];
+    strncpy(temp, a + start, strlen(a) - start);
+    char *p = strstr(temp, b);
+    return p ? p - temp + start : -1;
 }
 
 /**
@@ -224,7 +222,7 @@ void grep(char *args[], int args_count)
         if (strstr(buffer, pattern))
         {
             int i;
-            int pos = strpos(buffer, pattern, 0);
+            int pos = index_of(buffer, pattern, 0);
             for (i = 0; i < strlen(buffer); i++)
             {
                 putchar(buffer[i]);
@@ -235,7 +233,7 @@ void grep(char *args[], int args_count)
                 else if (pos + strlen(pattern) == i + 1)
                 {
                     printf(RESET);
-                    pos = strpos(buffer, pattern, i + 1);
+                    pos = index_of(buffer, pattern, i + 1);
                 }
             }
             printf(RESET);
