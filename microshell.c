@@ -16,6 +16,7 @@
 #define EXIT "exit"
 #define HELP "help"
 #define CLEAR "clear"
+#define HISTORY "history"
 #define MOVE "mv"
 #define CHANGE_DIR "cd"
 
@@ -27,6 +28,7 @@
 #define RESET "\x1B[0m"
 
 #define HELP_FORMAT "%-9s %s \n"
+#define HISTORY_FORMAT "%-3d %s \n"
 
 #define BUFFER 1024
 
@@ -36,6 +38,7 @@
 
 void help();
 void clear();
+void history();
 void move(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
 int execute(char *args[]);
@@ -51,8 +54,8 @@ void parse_args(char *args[], char command[], int *args_count);
 
 int main()
 {
-    clear();
     char *input;
+    clear();
     rl_bind_key('\t', rl_complete);
     while (true)
     {
@@ -83,6 +86,10 @@ int main()
         else if (strcmp(args[0], CLEAR) == 0)
         {
             clear();
+        }
+        else if (strcmp(args[0], HISTORY) == 0)
+        {
+            history();
         }
         else if (strcmp(args[0], MOVE) == 0)
         {
@@ -277,24 +284,29 @@ int execute(char *args[])
     return result;
 }
 
+void history()
+{
+    register HIST_ENTRY **hist_array;
+    hist_array = history_list();
+    int i;
+    if (hist_array == NULL)
+    {
+        fprintf(stderr, RED "Cannot get history\n" RESET);
+        return;
+    }
+    for (i = 0; hist_array[i]; i++)
+    {
+        printf(HISTORY_FORMAT, i + history_base, hist_array[i]->line);
+    }
+}
+
 void help()
 {
-    printf("\e[1;1H\e[2J");
-    printf(GRN);
-    printf("##################################################################\n");
-    printf("#                                                                #\n");
-    printf("#                                                                #\n");
-    printf("#                                                                #\n");
-    printf("#                                                                #\n");
-    printf("#                                                                #\n");
-    printf("##################################################################\n\n");
-    printf(RESET);
-    printf(RED "Developed by Dawid Korzepa © 2021\n\n" RESET);
-    printf(GRN HELP_FORMAT RESET, "clear", "There will be a cool info.");
-    printf(GRN HELP_FORMAT RESET, "help", "There will be a cool info.");
-    printf(GRN HELP_FORMAT RESET, "exit", "There will be a cool info.");
-    printf(GRN HELP_FORMAT RESET, "cd", "There will be a cool info.");
-    printf(GRN HELP_FORMAT RESET, "ps", "There will be a cool info.");
-    printf(GRN HELP_FORMAT RESET, "ls", "There will be a cool info.");
-    printf("\n\n");
+    printf(HELP_FORMAT, "clear", "There will be a cool info.");
+    printf(HELP_FORMAT, "help", "There will be a cool info.");
+    printf(HELP_FORMAT, "exit", "There will be a cool info.");
+    printf(HELP_FORMAT, "cd", "There will be a cool info.");
+    printf(HELP_FORMAT, "ps", "There will be a cool info.");
+    printf(HELP_FORMAT, "ls", "There will be a cool info.");
+    printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
 }
