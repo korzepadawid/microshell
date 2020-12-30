@@ -17,6 +17,7 @@
 #define HELP "help"
 #define CLEAR "clear"
 #define HISTORY "history"
+#define GREP "grep"
 #define MOVE "mv"
 #define CHANGE_DIR "cd"
 
@@ -25,6 +26,8 @@
 #define GRN "\x1B[32m"
 #define HCYN "\e[0;96m"
 #define GREY "\x1B[90m"
+#define REDB "\e[41m"
+#define CYN "\e[0;36m"
 #define RESET "\x1B[0m"
 
 #define HELP_FORMAT "%-9s %s \n"
@@ -40,6 +43,7 @@ void help();
 void clear();
 void history();
 void move(char *args[], int args_count);
+void grep(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
 int execute(char *args[]);
 
@@ -51,6 +55,7 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
+int strpos(char *haystack, char *needle, int offset);
 
 int main()
 {
@@ -90,6 +95,10 @@ int main()
         else if (strcmp(args[0], HISTORY) == 0)
         {
             history();
+        }
+        else if (strcmp(args[0], GREP) == 0)
+        {
+            grep(args, args_count);
         }
         else if (strcmp(args[0], MOVE) == 0)
         {
@@ -179,9 +188,61 @@ void parse_args(char *args[], char command[], int *args_count)
     *args_count = i;
 }
 
+int strpos(char *hay, char *needle, int offset)
+{
+    char haystack[strlen(hay)];
+    strncpy(haystack, hay + offset, strlen(hay) - offset);
+    char *p = strstr(haystack, needle);
+    if (p)
+        return p - haystack + offset;
+    return -1;
+}
+
 /**
 * Shell programs
 */
+
+void grep(char *args[], int args_count)
+{
+    FILE *file;
+    char *pattern = args[1], *source = args[2], buffer[BUFFER];
+
+    if (args_count != 3)
+    {
+        fprintf(stderr, RED "Wrong format, use grep <pattern> <source>\n" RESET);
+        return;
+    }
+
+    if ((file = fopen(source, "r")) == NULL)
+    {
+        fprintf(stderr, RED "Cannot open source\n" RESET);
+        return;
+    }
+
+    while (fgets(buffer, BUFFER, file))
+    {
+        if (strstr(buffer, pattern))
+        {
+            int i;
+            int pos = strpos(buffer, pattern, 0);
+            for (i = 0; i < strlen(buffer); i++)
+            {
+                putchar(buffer[i]);
+                if (i + 1 == pos)
+                {
+                    printf(GRN);
+                }
+                else if (pos + strlen(pattern) == i + 1)
+                {
+                    printf(RESET);
+                    pos = strpos(buffer, pattern, i + 1);
+                }
+            }
+            printf(RESET);
+        }
+    }
+    fclose(file);
+}
 
 void move(char *args[], int args_count)
 {
