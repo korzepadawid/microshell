@@ -64,7 +64,7 @@ int main()
         printf("%s[%s%s%s:%s%s%s]%s\n", GREY, MAG, user(), GREY, HCYN, path(), GREY, RESET);
         input = readline("$ ");
 
-        if (input != NULL)
+        if (strlen(input) != 0)
         {
             add_history(input);
         }
@@ -287,9 +287,8 @@ int execute(char *args[])
 void history()
 {
     register HIST_ENTRY **hist_array;
-    hist_array = history_list();
     int i;
-    if (hist_array == NULL)
+    if ((hist_array = history_list()) == NULL)
     {
         fprintf(stderr, RED "Cannot get history\n" RESET);
         return;
@@ -306,7 +305,8 @@ void help()
     printf(HELP_FORMAT, "help", "There will be a cool info.");
     printf(HELP_FORMAT, "exit", "There will be a cool info.");
     printf(HELP_FORMAT, "cd", "There will be a cool info.");
-    printf(HELP_FORMAT, "ps", "There will be a cool info.");
-    printf(HELP_FORMAT, "ls", "There will be a cool info.");
+    printf(HELP_FORMAT, "mv", "There will be a cool info.");
+    printf(HELP_FORMAT, "history", "There will be a cool info.");
     printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
+    printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
 }
