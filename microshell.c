@@ -45,7 +45,7 @@ void history();
 void move(char *args[], int args_count);
 void grep(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
-int execute(char *args[]);
+void execute(char *args[]);
 
 /**
 * Helpers
@@ -110,10 +110,7 @@ int main()
         }
         else
         {
-            if (execute(args) < 0)
-            {
-                fprintf(stderr, RED "%s, type help if you got lost.\n" RESET, strerror(errno));
-            }
+            execute(args);
         }
         free(input);
     }
@@ -329,18 +326,19 @@ void change_dir(char *args[], int args_count)
     }
 }
 
-int execute(char *args[])
+void execute(char *args[])
 {
-    int pid, result;
+    int pid;
     if ((pid = fork()) == 0)
     {
-        result = execvp(args[0], args);
+        execvp(args[0], args);
+        fprintf(stderr, RED "Unknown command, type help if you got lost\n" RESET);
+        exit(1);
     }
     else
     {
         wait(NULL);
     }
-    return result;
 }
 
 void history()
@@ -363,6 +361,7 @@ void help()
     printf(HELP_FORMAT, "clear", "There will be a cool info.");
     printf(HELP_FORMAT, "help", "There will be a cool info.");
     printf(HELP_FORMAT, "exit", "There will be a cool info.");
+    printf(HELP_FORMAT, "grep", "There will be a cool info.");
     printf(HELP_FORMAT, "cd", "There will be a cool info.");
     printf(HELP_FORMAT, "mv", "There will be a cool info.");
     printf(HELP_FORMAT, "history", "There will be a cool info.");
