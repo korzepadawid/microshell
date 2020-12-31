@@ -196,13 +196,14 @@ int index_of(char *a, char *b, int start)
 
 char *lowercase(char *str)
 {
-    unsigned char *mystr = (unsigned char *)str;
+    unsigned char *temp_str = (unsigned char *)str;
 
-    while (*mystr)
+    while (*temp_str)
     {
-        *mystr = tolower(*mystr);
-        mystr++;
+        *temp_str = tolower(*temp_str);
+        temp_str++;
     }
+
     return str;
 }
 
