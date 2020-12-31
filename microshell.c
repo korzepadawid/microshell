@@ -55,7 +55,7 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
-int strpos(char *haystack, char *needle, int offset);
+int index_of(char *a, char *b, int start);
 
 int main()
 {
