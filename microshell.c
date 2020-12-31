@@ -56,6 +56,7 @@ const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
 int index_of(char *a, char *b, int start);
+char *lowercase(char *str);
 
 int main()
 {
@@ -193,6 +194,18 @@ int index_of(char *a, char *b, int start)
     return p ? p - temp + start : -1;
 }
 
+char *lowercase(char *str)
+{
+    unsigned char *mystr = (unsigned char *)str;
+
+    while (*mystr)
+    {
+        *mystr = tolower(*mystr);
+        mystr++;
+    }
+    return str;
+}
+
 /**
 * Shell programs
 */
@@ -200,11 +213,23 @@ int index_of(char *a, char *b, int start)
 void grep(char *args[], int args_count)
 {
     FILE *file;
-    char *pattern = args[1], *source = args[2], buffer[BUFFER];
+    char pattern[BUFFER], source[BUFFER], line[BUFFER];
+    bool ignore_case = false;
 
-    if (args_count != 3)
+    if (args_count == 3)
     {
-        fprintf(stderr, RED "Wrong format, use grep <pattern> <source>\n" RESET);
+        strcpy(pattern, args[1]);
+        strcpy(source, args[2]);
+    }
+    else if (args_count == 4 && (strcmp(args[1], "-i")) == 0)
+    {
+        ignore_case = true;
+        strcpy(pattern, args[2]);
+        strcpy(source, args[3]);
+    }
+    else
+    {
+        fprintf(stderr, RED "Wrong format, use grep <pattern> <source> or optional grep -i <pattern> <source> \n" RESET);
         return;
     }
 
@@ -214,24 +239,34 @@ void grep(char *args[], int args_count)
         return;
     }
 
-    while (fgets(buffer, BUFFER, file))
+    while (fgets(line, BUFFER, file))
     {
-        if (strstr(buffer, pattern))
+        char dup_line[strlen(line)];
+        strcpy(dup_line, line);
+        char lowercase_line[strlen(line)];
+        strcpy(lowercase_line, lowercase(dup_line));
+
+        char dup_pattern[strlen(pattern)];
+        strcpy(dup_pattern, pattern);
+        char lowercase_pattern[strlen(pattern)];
+        strcpy(lowercase_pattern, lowercase(dup_pattern));
+
+        if ((strstr(line, pattern) && !ignore_case) || (strstr(lowercase_line, lowercase_pattern) && ignore_case))
         {
             int i;
-            int pos = index_of(buffer, pattern, 0);
-            for (i = 0; i < strlen(buffer); i++)
+            int pos = !ignore_case ? index_of(line, pattern, 0) : index_of(lowercase_line, lowercase_pattern, 0);
+            for (i = 0; i < strlen(line); i++)
             {
-                putchar(buffer[i]);
-                if (i + 1 == pos)
+                if (i == pos)
                 {
                     printf(GRN);
                 }
-                else if (pos + strlen(pattern) == i + 1)
+                else if (pos + strlen(pattern) == i)
                 {
                     printf(RESET);
-                    pos = index_of(buffer, pattern, i + 1);
+                    pos = !ignore_case ? index_of(line, pattern, i + 1) : index_of(lowercase_line, lowercase_pattern, i + 1);
                 }
+                putchar(line[i]);
             }
             printf(RESET);
         }
