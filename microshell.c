@@ -347,6 +347,10 @@ void change_dir(char *args[], int args_count)
     {
         chdir(getenv("HOME"));
     }
+    else if (strcmp(args[1], "-") == 0)
+    {
+        chdir(getenv("OLDPWD"));
+    }
     else if (strcmp(args[1], "..") == 0)
     {
         chdir("..");

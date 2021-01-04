@@ -1,5 +1,0 @@
-cat
-dog
-lion
-snake
-mouse
