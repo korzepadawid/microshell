@@ -15,6 +15,7 @@
 
 #define EXIT "exit"
 #define HELP "help"
+#define TREE "tree"
 #define CLEAR "clear"
 #define HISTORY "history"
 #define GREP "grep"
@@ -26,6 +27,7 @@
 #define GRN "\x1B[32m"
 #define HCYN "\e[0;96m"
 #define GREY "\x1B[90m"
+#define YEL "\e[0;33m"
 #define REDB "\e[41m"
 #define CYN "\e[0;36m"
 #define RESET "\x1B[0m"
@@ -43,6 +45,7 @@ void help();
 void clear();
 void history();
 void move(char *args[], int args_count);
+void tree(char *args[], int args_count);
 void grep(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
 void execute(char *args[]);
@@ -55,6 +58,7 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
+void print_nodes(char *node, int j);
 int index_of(char *a, char *b, int start);
 char *lowercase(char *str);
 
@@ -67,7 +71,7 @@ int main()
     {
         char *args[BUFFER];
         int args_count = 0;
-        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, MAG, user(), GREY, HCYN, path(), GREY, RESET);
+        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, path(), GREY, RESET);
         input = readline("$ ");
 
         if (strlen(input) != 0)
@@ -100,6 +104,10 @@ int main()
         else if (strcmp(args[0], GREP) == 0)
         {
             grep(args, args_count);
+        }
+        else if (strcmp(args[0], TREE) == 0)
+        {
+            tree(args, args_count);
         }
         else if (strcmp(args[0], MOVE) == 0)
         {
@@ -207,9 +215,76 @@ char *lowercase(char *str)
     return str;
 }
 
+void print_nodes(char *node, int j)
+{
+    struct dirent *entry;
+    DIR *dir;
+
+    if (((dir = opendir(node)) == NULL) && (j == 0))
+    {
+        fprintf(stderr, RED "Unknown path\n" RESET);
+        return;
+    }
+
+    if (dir)
+    {
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0))
+            {
+                int i;
+                for (i = 0; i < j; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        printf("%s", "|");
+                    }
+                    else
+                    {
+                        printf("\t");
+                    }
+                }
+
+                printf("%s%s%s%s\n", "|--", entry->d_type == 4 ? YEL : RESET, entry->d_name, RESET);
+
+                char target[BUFFER];
+
+                strcpy(target, node);
+                strcat(target, "/");
+                strcat(target, entry->d_name);
+
+                print_nodes(target, j + 2);
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
 /**
 * Shell programs
 */
+
+void tree(char *args[], int args_count)
+{
+    char target[BUFFER];
+    if (args_count > 2)
+    {
+        fprintf(stderr, RED "Wrong format, tree or tree <target> \n" RESET);
+        return;
+    }
+
+    if (args_count == 1)
+    {
+        strcpy(target, path());
+    }
+    else
+    {
+        strcpy(target, args[1]);
+    }
+
+    print_nodes(target, 0);
+}
 
 void grep(char *args[], int args_count)
 {
@@ -402,6 +477,7 @@ void help()
     printf(HELP_FORMAT, "help", "There will be a cool info.");
     printf(HELP_FORMAT, "exit", "There will be a cool info.");
     printf(HELP_FORMAT, "grep", "There will be a cool info.");
+    printf(HELP_FORMAT, "tree", "There will be a cool info.");
     printf(HELP_FORMAT, "cd", "There will be a cool info.");
     printf(HELP_FORMAT, "mv", "There will be a cool info.");
     printf(HELP_FORMAT, "history", "There will be a cool info.");
