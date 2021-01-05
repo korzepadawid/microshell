@@ -230,7 +230,7 @@ void print_nodes(char *node, int j)
     {
         while ((entry = readdir(dir)) != NULL)
         {
-            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0))
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && entry->d_name[0] != '.')
             {
                 int i;
                 for (i = 0; i < j; i++)
