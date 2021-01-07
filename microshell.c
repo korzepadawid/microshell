@@ -12,6 +12,9 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <sys/types.h>
 
 #define EXIT "exit"
 #define HELP "help"
@@ -20,6 +23,7 @@
 #define HISTORY "history"
 #define GREP "grep"
 #define MOVE "mv"
+#define COPY "cp"
 #define CHANGE_DIR "cd"
 
 #define MAG "\e[0;35m"
@@ -38,29 +42,46 @@
 #define BUFFER 1024
 
 /**
-* Shell programs
+ * Helpers
+*/
+
+void execute(char *args[]);
+const char *path();
+const char *user();
+char *substring(char *string, int position, int length);
+void parse_args(char *args[], char command[], int *args_count);
+int index_of(char *a, char *b, int start);
+char *lowercase(char *str);
+
+/**
+ * Shell programs
 */
 
 void help();
 void clear();
 void history();
 void move(char *args[], int args_count);
-void tree(char *args[], int args_count);
 void grep(char *args[], int args_count);
+void copy(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
-void execute(char *args[]);
 
 /**
-* Helpers
+ * tree
 */
 
-const char *path();
-const char *user();
-char *substring(char *string, int position, int length);
-void parse_args(char *args[], char command[], int *args_count);
 void print_nodes(char *node, int j);
-int index_of(char *a, char *b, int start);
-char *lowercase(char *str);
+void tree(char *args[], int args_count);
+
+/**
+ * copy
+*/
+
+bool exists(char *filename);
+bool is_dir(char *path);
+mode_t permissions_of(char *path);
+void copy_structure(char *source, char *destination);
+void copy_file(char *from, char *to);
+void copy_directory(char *from, char *to);
 
 int main()
 {
@@ -101,6 +122,10 @@ int main()
         {
             history();
         }
+        else if (strcmp(args[0], COPY) == 0)
+        {
+            copy(args, args_count);
+        }
         else if (strcmp(args[0], GREP) == 0)
         {
             grep(args, args_count);
@@ -128,7 +153,7 @@ int main()
 }
 
 /**
-* Helpers
+ * Helpers
 */
 
 const char *user()
@@ -215,76 +240,9 @@ char *lowercase(char *str)
     return str;
 }
 
-void print_nodes(char *node, int j)
-{
-    struct dirent *entry;
-    DIR *dir;
-
-    if (((dir = opendir(node)) == NULL) && (j == 0))
-    {
-        fprintf(stderr, RED "Unknown path\n" RESET);
-        return;
-    }
-
-    if (dir)
-    {
-        while ((entry = readdir(dir)) != NULL)
-        {
-            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && entry->d_name[0] != '.')
-            {
-                int i;
-                for (i = 0; i < j; i++)
-                {
-                    if (i % 2 == 0)
-                    {
-                        printf("%s", "|");
-                    }
-                    else
-                    {
-                        printf("\t");
-                    }
-                }
-
-                printf("%s%s%s%s\n", "|--", entry->d_type == 4 ? YEL : RESET, entry->d_name, RESET);
-
-                char target[BUFFER];
-
-                strcpy(target, node);
-                strcat(target, "/");
-                strcat(target, entry->d_name);
-
-                print_nodes(target, j + 2);
-            }
-        }
-    }
-
-    closedir(dir);
-}
-
 /**
-* Shell programs
+ * Shell programs
 */
-
-void tree(char *args[], int args_count)
-{
-    char target[BUFFER];
-    if (args_count > 2)
-    {
-        fprintf(stderr, RED "Wrong format, tree or tree <target> \n" RESET);
-        return;
-    }
-
-    if (args_count == 1)
-    {
-        strcpy(target, path());
-    }
-    else
-    {
-        strcpy(target, args[1]);
-    }
-
-    print_nodes(target, 0);
-}
 
 void grep(char *args[], int args_count)
 {
@@ -483,4 +441,232 @@ void help()
     printf(HELP_FORMAT, "history", "There will be a cool info.");
     printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
     printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
+}
+
+/**
+ * tree
+*/
+
+void print_nodes(char *node, int j)
+{
+    struct dirent *entry;
+    DIR *dir;
+
+    if (((dir = opendir(node)) == NULL) && (j == 0))
+    {
+        fprintf(stderr, RED "Unknown path\n" RESET);
+        return;
+    }
+
+    if (dir)
+    {
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && entry->d_name[0] != '.')
+            {
+                int i;
+                for (i = 0; i < j; i++)
+                {
+                    if (i % 2 == 0)
+                    {
+                        printf("%s", "|");
+                    }
+                    else
+                    {
+                        printf("\t");
+                    }
+                }
+
+                printf("%s%s%s%s\n", "|--", entry->d_type == 4 ? YEL : RESET, entry->d_name, RESET);
+
+                char target[BUFFER];
+
+                strcpy(target, node);
+                strcat(target, "/");
+                strcat(target, entry->d_name);
+
+                print_nodes(target, j + 2);
+            }
+        }
+    }
+
+    closedir(dir);
+}
+
+void tree(char *args[], int args_count)
+{
+    char target[BUFFER];
+    if (args_count > 2)
+    {
+        fprintf(stderr, RED "Wrong format, tree or tree <target> \n" RESET);
+        return;
+    }
+
+    if (args_count == 1)
+    {
+        strcpy(target, path());
+    }
+    else
+    {
+        strcpy(target, args[1]);
+    }
+
+    print_nodes(target, 0);
+}
+
+/**
+ * copy
+*/
+
+bool exists(char *filename)
+{
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
+}
+
+bool is_dir(char *path)
+{
+    struct stat buf;
+    stat(path, &buf);
+    return S_ISDIR(buf.st_mode);
+}
+
+mode_t permissions_of(char *path)
+{
+    struct stat stat_buffer;
+
+    if (stat(path, &stat_buffer) == -1)
+    {
+        fprintf(stderr, RED "Cannot get permissions. \n" RESET);
+        return;
+    }
+
+    return stat_buffer.st_mode;
+}
+
+void copy_directory(char *from, char *to)
+{
+    umask(0);
+
+    int result = mkdir(to, permissions_of(from));
+    if (result < 0)
+    {
+        rmdir(to);
+        mkdir(to, permissions_of(from));
+    }
+}
+
+void copy_file(char *from, char *to)
+{
+    umask(0);
+
+    int fd_in, fd_out, bytes;
+    char buffer[BUFFER];
+
+    fd_in = open(from, O_RDONLY);
+    fd_out = open(to, O_RDWR | O_CREAT | O_EXCL, permissions_of(from));
+
+    if (fd_out < 0)
+    {
+        fd_out = creat(to, permissions_of(from));
+    }
+
+    while ((bytes = read(fd_in, &buffer, BUFFER)) > 0)
+    {
+        write(fd_out, &buffer, bytes);
+    }
+
+    close(fd_in);
+    close(fd_out);
+}
+
+void copy_structure(char *source, char *destination)
+{
+    char temp_source[BUFFER], temp_destination[BUFFER];
+    struct dirent *entry;
+    DIR *dir;
+
+    if ((dir = opendir(source)) != NULL)
+    {
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0))
+            {
+                strcpy(temp_source, source);
+                strcpy(temp_destination, destination);
+
+                strcat(temp_source, "/");
+                strcat(temp_destination, "/");
+
+                strcat(temp_source, entry->d_name);
+                strcat(temp_destination, entry->d_name);
+
+                if (is_dir(temp_source))
+                {
+                    copy_directory(temp_source, temp_destination);
+                }
+                else
+                {
+                    copy_file(temp_source, temp_destination);
+                }
+
+                copy_structure(temp_source, temp_destination);
+            }
+        }
+    }
+    closedir(dir);
+}
+
+void copy(char *args[], int args_count)
+{
+    char from[BUFFER], to[BUFFER];
+    if (args_count != 3)
+    {
+        fprintf(stderr, RED "Wrong format, use cp <source> <destination> \n" RESET);
+        return;
+    }
+
+    strcpy(from, args[1]);
+    strcpy(to, args[2]);
+
+    if (!exists(from))
+    {
+        fprintf(stderr, RED "Unknown path \n" RESET);
+        return;
+    }
+
+    umask(0);
+
+    if (is_dir(from) && is_dir(to) && exists(to))
+    {
+        char path[BUFFER];
+        strcpy(path, to);
+        strcat(path, "/");
+        strcat(path, basename(from));
+        mkdir(path, permissions_of(from));
+        copy_structure(from, path);
+    }
+    else if (is_dir(from) && !exists(to))
+    {
+        mkdir(to, permissions_of(from));
+        copy_structure(from, to);
+    }
+    else if (!is_dir(from) && exists(from) && !exists(to))
+    {
+        copy_file(from, to);
+    }
+    else if (!is_dir(from) && exists(from) && exists(to) && is_dir(to))
+    {
+        char path[BUFFER];
+        strcpy(path, to);
+        copy_file(from, to);
+        strcat(path, "/");
+        strcat(path, basename(from));
+        copy_file(from, path);
+    }
+    else
+    {
+        fprintf(stderr, RED "Unknown path \n" RESET);
+        return;
+    }
 }
