@@ -84,7 +84,7 @@ void copy_directory(char *from, char *to);
 
 bool match(char *str, char *pattern, int str_len, int pat_len);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
-void find();
+void find(char *args[], int args_count);
 
 int main()
 {
@@ -127,7 +127,7 @@ int main()
         }
         else if (strcmp(args[0], FIND) == 0)
         {
-            find();
+            find(args, args_count);
         }
         else if (strcmp(args[0], COPY) == 0)
         {
@@ -320,6 +320,7 @@ void help()
     printf(HELP_FORMAT, "help", "There will be a cool info.");
     printf(HELP_FORMAT, "exit", "There will be a cool info.");
     printf(HELP_FORMAT, "cd", "There will be a cool info.");
+    printf(HELP_FORMAT, "find", "There will be a cool info.");
     printf(HELP_FORMAT, "history", "There will be a cool info.");
     printf(HELP_FORMAT, "tree", "There will be a cool info.");
     printf(HELP_FORMAT, "cp", "There will be a cool info.");
@@ -593,7 +594,7 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
         {
             if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0))
             {
-                char new_target[BUFSIZ];
+                char new_target[BUFFER];
                 strcpy(new_target, path);
                 strcat(new_target, "/");
                 strcat(new_target, entry->d_name);
@@ -618,20 +619,64 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
     closedir(dir);
 }
 
-void find()
+void find(char *args[], int args_count)
 {
-    char path[BUFSIZ];
-    bool dirs, files;
+    char path[BUFFER], pattern[BUFFER];
+    bool dirs, files, format_error;
 
-    strcpy(path, "/home/dawid");
     dirs = true;
     files = true;
+    format_error = false;
 
-    if (!(is_dir(path) && exists(path)))
+    if (args_count == 4 || args_count == 6)
     {
-        fprintf(stderr, "Unknown path");
+        strcpy(path, args[1]);
+        if (strcmp(args[2], "-name") == 0)
+        {
+            strcpy(pattern, args[3]);
+        }
+        else
+        {
+            format_error = true;
+        }
+    }
+    else
+    {
+        format_error = true;
+    }
+
+    if (args_count == 6)
+    {
+        if ((strcmp(args[4], "-type") == 0) && ((strcmp(args[5], "d") == 0) || (strcmp(args[5], "f") == 0)))
+        {
+            if ((strcmp(args[5], "d") == 0))
+            {
+                dirs = true;
+                files = false;
+            }
+            else
+            {
+                dirs = false;
+                files = true;
+            }
+        }
+        else
+        {
+            format_error = true;
+        }
+    }
+
+    if (format_error)
+    {
+        fprintf(stderr, RED "Wrong format, use find <path> -name <name> -type [df] or find <path> -name <name>\n" RESET);
         return;
     }
 
-    find_recursively(path, "*.c", dirs, files);
+    if (!(is_dir(path) && exists(path)))
+    {
+        fprintf(stderr, HCYN "Unknown path to directory \n" RESET);
+        return;
+    }
+
+    find_recursively(path, pattern, dirs, files);
 }
