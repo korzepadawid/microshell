@@ -21,8 +21,6 @@
 #define TREE "tree"
 #define CLEAR "clear"
 #define HISTORY "history"
-#define GREP "grep"
-#define MOVE "mv"
 #define COPY "cp"
 #define CHANGE_DIR "cd"
 
@@ -50,9 +48,9 @@ const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
 void parse_args(char *args[], char command[], int *args_count);
-int index_of(char *a, char *b, int start);
-char *lowercase(char *str);
-
+bool exists(char *filename);
+bool is_dir(char *path);
+mode_t permissions_of(char *path);
 /**
  * Shell programs
 */
@@ -60,8 +58,6 @@ char *lowercase(char *str);
 void help();
 void clear();
 void history();
-void move(char *args[], int args_count);
-void grep(char *args[], int args_count);
 void copy(char *args[], int args_count);
 void change_dir(char *args[], int args_count);
 
@@ -76,9 +72,6 @@ void tree(char *args[], int args_count);
  * copy
 */
 
-bool exists(char *filename);
-bool is_dir(char *path);
-mode_t permissions_of(char *path);
 void copy_structure(char *source, char *destination);
 void copy_file(char *from, char *to);
 void copy_directory(char *from, char *to);
@@ -126,17 +119,9 @@ int main()
         {
             copy(args, args_count);
         }
-        else if (strcmp(args[0], GREP) == 0)
-        {
-            grep(args, args_count);
-        }
         else if (strcmp(args[0], TREE) == 0)
         {
             tree(args, args_count);
-        }
-        else if (strcmp(args[0], MOVE) == 0)
-        {
-            move(args, args_count);
         }
         else if (strcmp(args[0], CHANGE_DIR) == 0)
         {
@@ -219,149 +204,35 @@ void parse_args(char *args[], char command[], int *args_count)
     *args_count = i;
 }
 
-int index_of(char *a, char *b, int start)
+bool exists(char *filename)
 {
-    char temp[strlen(a)];
-    strncpy(temp, a + start, strlen(a) - start);
-    char *p = strstr(temp, b);
-    return p ? p - temp + start : -1;
+    struct stat buffer;
+    return (stat(filename, &buffer) == 0);
 }
 
-char *lowercase(char *str)
+bool is_dir(char *path)
 {
-    unsigned char *temp_str = (unsigned char *)str;
+    struct stat buf;
+    stat(path, &buf);
+    return S_ISDIR(buf.st_mode);
+}
 
-    while (*temp_str)
+mode_t permissions_of(char *path)
+{
+    struct stat stat_buffer;
+
+    if (stat(path, &stat_buffer) == -1)
     {
-        *temp_str = tolower(*temp_str);
-        temp_str++;
+        fprintf(stderr, RED "Cannot get permissions. \n" RESET);
+        exit(EXIT_FAILURE);
     }
 
-    return str;
+    return stat_buffer.st_mode;
 }
 
 /**
  * Shell programs
 */
-
-void grep(char *args[], int args_count)
-{
-    FILE *file;
-    char pattern[BUFFER], source[BUFFER], line[BUFFER];
-    bool ignore_case = false;
-
-    if (args_count == 3)
-    {
-        strcpy(pattern, args[1]);
-        strcpy(source, args[2]);
-    }
-    else if (args_count == 4 && (strcmp(args[1], "-i")) == 0)
-    {
-        ignore_case = true;
-        strcpy(pattern, args[2]);
-        strcpy(source, args[3]);
-    }
-    else
-    {
-        fprintf(stderr, RED "Wrong format, use grep <pattern> <source> or optional grep -i <pattern> <source> \n" RESET);
-        return;
-    }
-
-    if ((file = fopen(source, "r")) == NULL)
-    {
-        fprintf(stderr, RED "Cannot open source\n" RESET);
-        return;
-    }
-
-    while (fgets(line, BUFFER, file))
-    {
-        char dup_line[strlen(line)];
-        strcpy(dup_line, line);
-        char lowercase_line[strlen(line)];
-        strcpy(lowercase_line, lowercase(dup_line));
-
-        char dup_pattern[strlen(pattern)];
-        strcpy(dup_pattern, pattern);
-        char lowercase_pattern[strlen(pattern)];
-        strcpy(lowercase_pattern, lowercase(dup_pattern));
-
-        if ((strstr(line, pattern) && !ignore_case) || (strstr(lowercase_line, lowercase_pattern) && ignore_case))
-        {
-            int i;
-            int pos = !ignore_case ? index_of(line, pattern, 0) : index_of(lowercase_line, lowercase_pattern, 0);
-            for (i = 0; i < strlen(line); i++)
-            {
-                if (i == pos)
-                {
-                    printf(GRN);
-                }
-                else if (pos + strlen(pattern) == i)
-                {
-                    printf(RESET);
-                    pos = !ignore_case ? index_of(line, pattern, i + 1) : index_of(lowercase_line, lowercase_pattern, i + 1);
-                }
-                putchar(line[i]);
-            }
-            printf(RESET);
-        }
-    }
-    fclose(file);
-}
-
-void move(char *args[], int args_count)
-{
-    if (args_count != 3)
-    {
-        fprintf(stderr, RED "Wrong format, use mv <source> <destination>\n" RESET);
-        return;
-    }
-
-    char *source = args[1], *destination = args[2], destination_path[BUFFER];
-
-    if (destination[0] == '/')
-    {
-        strcat(destination, "/");
-        strcat(destination, source);
-        if ((rename(source, destination)) != 0)
-        {
-            fprintf(stderr, RED "Unknown path\n" RESET);
-        }
-    }
-    else if (strcmp(destination, ".") == 0)
-    {
-        strcpy(destination_path, path());
-        strcat(destination_path, "/");
-        strcat(destination_path, basename(source));
-        if ((rename(source, destination_path)) != 0)
-        {
-            fprintf(stderr, RED "Unknown path\n" RESET);
-        }
-    }
-    else
-    {
-        DIR *dir;
-        if ((dir = opendir(destination)) == NULL)
-        {
-            if ((rename(source, destination)) != 0)
-            {
-                fprintf(stderr, RED "An error occurred\n" RESET);
-            }
-        }
-        else
-        {
-            char *current_location = getcwd(destination_path, sizeof(destination_path));
-            strcat(destination_path, "/");
-            strcat(destination_path, destination);
-            strcat(destination_path, "/");
-            strcat(destination_path, source);
-            if ((rename(source, current_location)) != 0)
-            {
-                fprintf(stderr, RED "Unknown directory\n" RESET);
-            }
-        }
-        closedir(dir);
-    }
-}
 
 void clear()
 {
@@ -517,32 +388,6 @@ void tree(char *args[], int args_count)
 /**
  * copy
 */
-
-bool exists(char *filename)
-{
-    struct stat buffer;
-    return (stat(filename, &buffer) == 0);
-}
-
-bool is_dir(char *path)
-{
-    struct stat buf;
-    stat(path, &buf);
-    return S_ISDIR(buf.st_mode);
-}
-
-mode_t permissions_of(char *path)
-{
-    struct stat stat_buffer;
-
-    if (stat(path, &stat_buffer) == -1)
-    {
-        fprintf(stderr, RED "Cannot get permissions. \n" RESET);
-        return;
-    }
-
-    return stat_buffer.st_mode;
-}
 
 void copy_directory(char *from, char *to)
 {
