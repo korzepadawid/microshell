@@ -22,6 +22,7 @@
 #define CLEAR "clear"
 #define HISTORY "history"
 #define COPY "cp"
+#define FIND "find"
 #define CHANGE_DIR "cd"
 
 #define MAG "\e[0;35m"
@@ -51,6 +52,7 @@ void parse_args(char *args[], char command[], int *args_count);
 bool exists(char *filename);
 bool is_dir(char *path);
 mode_t permissions_of(char *path);
+
 /**
  * Shell programs
 */
@@ -75,6 +77,14 @@ void tree(char *args[], int args_count);
 void copy_structure(char *source, char *destination);
 void copy_file(char *from, char *to);
 void copy_directory(char *from, char *to);
+
+/**
+ * find
+*/
+
+bool match(char *str, char *pattern, int str_len, int pat_len);
+void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
+void find();
 
 int main()
 {
@@ -114,6 +124,10 @@ int main()
         else if (strcmp(args[0], HISTORY) == 0)
         {
             history();
+        }
+        else if (strcmp(args[0], FIND) == 0)
+        {
+            find();
         }
         else if (strcmp(args[0], COPY) == 0)
         {
@@ -305,11 +319,10 @@ void help()
     printf(HELP_FORMAT, "clear", "There will be a cool info.");
     printf(HELP_FORMAT, "help", "There will be a cool info.");
     printf(HELP_FORMAT, "exit", "There will be a cool info.");
-    printf(HELP_FORMAT, "grep", "There will be a cool info.");
-    printf(HELP_FORMAT, "tree", "There will be a cool info.");
     printf(HELP_FORMAT, "cd", "There will be a cool info.");
-    printf(HELP_FORMAT, "mv", "There will be a cool info.");
     printf(HELP_FORMAT, "history", "There will be a cool info.");
+    printf(HELP_FORMAT, "tree", "There will be a cool info.");
+    printf(HELP_FORMAT, "cp", "There will be a cool info.");
     printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
     printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
 }
@@ -333,7 +346,7 @@ void print_nodes(char *node, int j)
     {
         while ((entry = readdir(dir)) != NULL)
         {
-            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && entry->d_name[0] != '.')
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && (entry->d_name[0] != '.'))
             {
                 int i;
                 for (i = 0; i < j; i++)
@@ -514,4 +527,111 @@ void copy(char *args[], int args_count)
         fprintf(stderr, RED "Unknown path \n" RESET);
         return;
     }
+}
+
+/**
+ * find
+*/
+
+bool match(char *str, char *pattern, int str_len, int pat_len)
+{
+    if (pat_len == 0)
+    {
+        return (str_len == 0);
+    }
+
+    bool search[str_len + 1][pat_len + 1];
+    int i, j;
+
+    for (i = 0; i <= str_len; i++)
+    {
+        for (j = 0; j <= pat_len; j++)
+        {
+            search[i][j] = false;
+        }
+    }
+
+    search[0][0] = true;
+    for (j = 1; j <= pat_len; j++)
+    {
+        if (pattern[j - 1] == '*')
+        {
+            search[0][j] = search[0][j - 1];
+        }
+    }
+
+    for (i = 1; i <= str_len; i++)
+    {
+        for (j = 1; j <= pat_len; j++)
+        {
+            if (pattern[j - 1] == '*')
+            {
+                search[i][j] = search[i][j - 1] || search[i - 1][j];
+            }
+            else if (pattern[j - 1] == '?' || str[i - 1] == pattern[j - 1])
+            {
+                search[i][j] = search[i - 1][j - 1];
+            }
+            else
+            {
+                search[i][j] = false;
+            }
+        }
+    }
+
+    return search[str_len][pat_len];
+}
+
+void find_recursively(char *path, char *pattern, bool dir_search, bool file_search)
+{
+    struct dirent *entry;
+    DIR *dir;
+
+    if ((dir = opendir(path)) != NULL)
+    {
+        while ((entry = readdir(dir)) != NULL)
+        {
+            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0))
+            {
+                char new_target[BUFSIZ];
+                strcpy(new_target, path);
+                strcat(new_target, "/");
+                strcat(new_target, entry->d_name);
+
+                if ((match(entry->d_name, pattern, strlen(entry->d_name), strlen(pattern))))
+                {
+                    if (is_dir(new_target) && dir_search)
+                    {
+                        printf(YEL "%s\n" RESET, new_target);
+                    }
+
+                    if (!is_dir(new_target) && exists(new_target) && file_search)
+                    {
+                        printf("%s\n", new_target);
+                    }
+                }
+
+                find_recursively(new_target, pattern, dir_search, file_search);
+            }
+        }
+    }
+    closedir(dir);
+}
+
+void find()
+{
+    char path[BUFSIZ];
+    bool dirs, files;
+
+    strcpy(path, "/home/dawid");
+    dirs = true;
+    files = true;
+
+    if (!(is_dir(path) && exists(path)))
+    {
+        fprintf(stderr, "Unknown path");
+        return;
+    }
+
+    find_recursively(path, "*.c", dirs, files);
 }
