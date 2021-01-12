@@ -40,6 +40,10 @@
 
 #define BUFFER 1024
 
+#define IDLE 0
+#define QUOTES 1
+#define WORD 2
+
 /**
  * Helpers
 */
@@ -48,7 +52,7 @@ void execute(char *args[]);
 const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
-void parse_args(char *args[], char command[], int *args_count);
+void parse_args(char *argv[], int *argc, char *cmd);
 bool exists(char *filename);
 bool is_dir(char *path);
 mode_t permissions_of(char *path);
@@ -88,12 +92,12 @@ void find(char *args[], int args_count);
 
 int main()
 {
-    char *input;
     clear();
     rl_bind_key('\t', rl_complete);
     while (true)
     {
         char *args[BUFFER];
+        char *input;
         int args_count = 0;
         printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, path(), GREY, RESET);
         input = readline("$ ");
@@ -103,7 +107,7 @@ int main()
             add_history(input);
         }
 
-        parse_args(args, input, &args_count);
+        parse_args(args, &args_count, input);
 
         if (args[0] == NULL)
         {
@@ -204,18 +208,45 @@ char *substring(char *string, int position, int length)
     return p;
 }
 
-void parse_args(char *args[], char command[], int *args_count)
+void parse_args(char *argv[], int *argc, char *cmd)
 {
-    int i = 0;
-    char *temp;
-    temp = strtok(command, " \'\n\t");
-    while (temp != NULL)
+    int current_char, state = IDLE, i = 0;
+    char *ptr, *begin;
+    ptr = cmd;
+    while (ptr != NULL && *ptr != '\0')
     {
-        args[i++] = temp;
-        temp = strtok(NULL, " \'\n\t");
+        current_char = *ptr;
+
+        if (state == IDLE)
+        {
+            if (current_char == '\"')
+            {
+                state = QUOTES;
+                begin = ptr + 1;
+            }
+            else if (current_char != ' ')
+            {
+                state = WORD;
+                begin = ptr;
+            }
+        }
+        else if ((state == QUOTES && current_char == '\"') || (state == WORD && current_char == ' '))
+        {
+            *ptr = 0;
+            argv[i++] = begin;
+            state = IDLE;
+        }
+
+        ptr++;
     }
-    args[i] = NULL;
-    *args_count = i;
+
+    if (state != IDLE)
+    {
+        argv[i++] = begin;
+    }
+
+    *argc = i;
+    argv[i] = NULL;
 }
 
 bool exists(char *filename)
