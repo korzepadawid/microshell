@@ -48,7 +48,7 @@
  * Helpers
 */
 
-void execute(char *args[]);
+void execute(char *argv[]);
 const char *path();
 const char *user();
 char *substring(char *string, int position, int length);
@@ -64,15 +64,15 @@ mode_t permissions_of(char *path);
 void help();
 void clear();
 void history();
-void copy(char *args[], int args_count);
-void change_dir(char *args[], int args_count);
+void copy(char *argv[], int argc);
+void change_dir(char *argv[], int argc);
 
 /**
  * tree
 */
 
 void print_nodes(char *node, int j);
-void tree(char *args[], int args_count);
+void tree(char *argv[], int argc);
 
 /**
  * copy
@@ -88,7 +88,7 @@ void copy_directory(char *from, char *to);
 
 bool match(char *str, char *pattern, int str_len, int pat_len);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
-void find(char *args[], int args_count);
+void find(char *argv[], int argc);
 
 int main()
 {
@@ -96,60 +96,60 @@ int main()
     rl_bind_key('\t', rl_complete);
     while (true)
     {
-        char *args[BUFFER];
-        char *input;
-        int args_count = 0;
+        char *argv[BUFFER];
+        char *cmd;
+        int argc = 0;
         printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, path(), GREY, RESET);
-        input = readline("$ ");
+        cmd = readline("$ ");
 
-        if (strlen(input) != 0)
+        if (strlen(cmd) != 0)
         {
-            add_history(input);
+            add_history(cmd);
         }
 
-        parse_args(args, &args_count, input);
+        parse_args(argv, &argc, cmd);
 
-        if (args[0] == NULL)
+        if (argv[0] == NULL)
         {
             continue;
         }
-        else if (strcmp(args[0], EXIT) == 0)
+        else if (strcmp(argv[0], EXIT) == 0)
         {
             exit(0);
         }
-        else if (strcmp(args[0], HELP) == 0)
+        else if (strcmp(argv[0], HELP) == 0)
         {
             help();
         }
-        else if (strcmp(args[0], CLEAR) == 0)
+        else if (strcmp(argv[0], CLEAR) == 0)
         {
             clear();
         }
-        else if (strcmp(args[0], HISTORY) == 0)
+        else if (strcmp(argv[0], HISTORY) == 0)
         {
             history();
         }
-        else if (strcmp(args[0], FIND) == 0)
+        else if (strcmp(argv[0], FIND) == 0)
         {
-            find(args, args_count);
+            find(argv, argc);
         }
-        else if (strcmp(args[0], COPY) == 0)
+        else if (strcmp(argv[0], COPY) == 0)
         {
-            copy(args, args_count);
+            copy(argv, argc);
         }
-        else if (strcmp(args[0], TREE) == 0)
+        else if (strcmp(argv[0], TREE) == 0)
         {
-            tree(args, args_count);
+            tree(argv, argc);
         }
-        else if (strcmp(args[0], CHANGE_DIR) == 0)
+        else if (strcmp(argv[0], CHANGE_DIR) == 0)
         {
-            change_dir(args, args_count);
+            change_dir(argv, argc);
         }
         else
         {
-            execute(args);
+            execute(argv);
         }
-        free(input);
+        free(cmd);
     }
 
     exit(EXIT_SUCCESS);
@@ -284,43 +284,43 @@ void clear()
     printf("\e[1;1H\e[2J");
 }
 
-void change_dir(char *args[], int args_count)
+void change_dir(char *argv[], int argc)
 {
 
-    if (args_count > 2)
+    if (argc > 2)
     {
         fprintf(stderr, RED "Wrong format, use cd <folder>\n" RESET);
         return;
     }
-    else if (args[1] == NULL || strcmp(args[1], "~") == 0)
+    else if (argv[1] == NULL || strcmp(argv[1], "~") == 0)
     {
         chdir(getenv("HOME"));
     }
-    else if (strcmp(args[1], "-") == 0)
+    else if (strcmp(argv[1], "-") == 0)
     {
         chdir(getenv("OLDPWD"));
     }
-    else if (strcmp(args[1], "..") == 0)
+    else if (strcmp(argv[1], "..") == 0)
     {
         chdir("..");
     }
-    else if (chdir(args[1]) == -1)
+    else if (chdir(argv[1]) == -1)
     {
         fprintf(stderr, RED "Fatal error %s\n" RESET, strerror(errno));
         return;
     }
     else
     {
-        chdir(args[1]);
+        chdir(argv[1]);
     }
 }
 
-void execute(char *args[])
+void execute(char *argv[])
 {
     int pid;
     if ((pid = fork()) == 0)
     {
-        execvp(args[0], args);
+        execvp(argv[0], argv);
         fprintf(stderr, RED "Unknown command, type help if you got lost\n" RESET);
         exit(1);
     }
@@ -409,22 +409,22 @@ void print_nodes(char *node, int j)
     closedir(dir);
 }
 
-void tree(char *args[], int args_count)
+void tree(char *argv[], int argc)
 {
     char target[BUFFER];
-    if (args_count > 2)
+    if (argc > 2)
     {
         fprintf(stderr, RED "Wrong format, tree or tree <target> \n" RESET);
         return;
     }
 
-    if (args_count == 1)
+    if (argc == 1)
     {
         strcpy(target, path());
     }
     else
     {
-        strcpy(target, args[1]);
+        strcpy(target, argv[1]);
     }
 
     print_nodes(target, 0);
@@ -507,17 +507,17 @@ void copy_structure(char *source, char *destination)
     closedir(dir);
 }
 
-void copy(char *args[], int args_count)
+void copy(char *argv[], int argc)
 {
     char from[BUFFER], to[BUFFER];
-    if (args_count != 3)
+    if (argc != 3)
     {
         fprintf(stderr, RED "Wrong format, use cp <source> <destination> \n" RESET);
         return;
     }
 
-    strcpy(from, args[1]);
-    strcpy(to, args[2]);
+    strcpy(from, argv[1]);
+    strcpy(to, argv[2]);
 
     if (!exists(from))
     {
@@ -650,7 +650,7 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
     closedir(dir);
 }
 
-void find(char *args[], int args_count)
+void find(char *argv[], int argc)
 {
     char path[BUFFER], pattern[BUFFER];
     bool dirs, files, format_error;
@@ -659,12 +659,12 @@ void find(char *args[], int args_count)
     files = true;
     format_error = false;
 
-    if (args_count == 4 || args_count == 6)
+    if (argc == 4 || argc == 6)
     {
-        strcpy(path, args[1]);
-        if (strcmp(args[2], "-name") == 0)
+        strcpy(path, argv[1]);
+        if (strcmp(argv[2], "-name") == 0)
         {
-            strcpy(pattern, args[3]);
+            strcpy(pattern, argv[3]);
         }
         else
         {
@@ -676,11 +676,11 @@ void find(char *args[], int args_count)
         format_error = true;
     }
 
-    if (args_count == 6)
+    if (argc == 6)
     {
-        if ((strcmp(args[4], "-type") == 0) && ((strcmp(args[5], "d") == 0) || (strcmp(args[5], "f") == 0)))
+        if ((strcmp(argv[4], "-type") == 0) && ((strcmp(argv[5], "d") == 0) || (strcmp(argv[5], "f") == 0)))
         {
-            if ((strcmp(args[5], "d") == 0))
+            if ((strcmp(argv[5], "d") == 0))
             {
                 dirs = true;
                 files = false;
