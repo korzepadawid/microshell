@@ -51,6 +51,7 @@
 void execute(char *argv[]);
 const char *path();
 const char *user();
+const char *home_dir();
 void parse_args(char *argv[], int *argc, char *cmd);
 bool exists(char *filename);
 bool is_dir(char *path);
@@ -89,10 +90,13 @@ bool match(char *str, char *pattern, int str_len, int pat_len);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
 void find(char *argv[], int argc);
 
+char prev_dir[BUFFER];
+
 int main()
 {
     clear();
     rl_bind_key('\t', rl_complete);
+    strcat(prev_dir, getenv("OLDPWD"));
     while (true)
     {
         char *argv[BUFFER];
@@ -261,32 +265,42 @@ void clear()
 
 void change_dir(char *argv[], int argc)
 {
+    char dest[BUFFER], current[BUFFER], *home;
+
+    strcpy(current, path());
 
     if (argc > 2)
     {
-        fprintf(stderr, RED "Wrong format, use cd <folder>\n" RESET);
+        fprintf(stderr, RED "Wrong format, use cd <directory>\n" RESET);
         return;
     }
-    else if (argv[1] == NULL || strcmp(argv[1], "~") == 0)
+
+    if (argc == 1 || strcmp(argv[1], "~") == 0)
     {
-        chdir(getenv("HOME"));
+        if ((home = getenv("HOME")) == NULL)
+        {
+            home = getpwuid(getuid())->pw_dir;
+        }
+        strcpy(dest, home);
     }
     else if (strcmp(argv[1], "-") == 0)
     {
-        chdir(getenv("OLDPWD"));
+        strcpy(dest, prev_dir);
+        printf("%s\n", dest);
     }
-    else if (strcmp(argv[1], "..") == 0)
+    else
     {
-        chdir("..");
+        strcpy(dest, argv[1]);
     }
-    else if (chdir(argv[1]) == -1)
+
+    if (chdir(dest) != 0)
     {
-        fprintf(stderr, RED "Fatal error %s\n" RESET, strerror(errno));
+        fprintf(stderr, RED "Fatal error: %s\n" RESET, strerror(errno));
         return;
     }
     else
     {
-        chdir(argv[1]);
+        strcpy(prev_dir, current);
     }
 }
 
