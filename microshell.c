@@ -49,6 +49,7 @@
 */
 
 void execute(char *argv[]);
+void replace_with(char *base, char *to_replace, char *replacement);
 const char *path();
 const char *user();
 const char *home_dir();
@@ -86,7 +87,7 @@ void copy_directory(char *from, char *to);
  * find
 */
 
-bool match(char *str, char *pattern, int str_len, int pat_len);
+bool wild_card_search(char *str, char *pattern, int str_len, int pat_len);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
 void find(char *argv[], int argc);
 
@@ -254,6 +255,25 @@ mode_t permissions_of(char *path)
     return stat_buffer.st_mode;
 }
 
+void replace_with(char *base, char *to_replace, char *replacement)
+{
+    char temp[BUFSIZ], *buf = base, *ptr;
+    char *begin = &temp[0];
+
+    while ((ptr = strstr(buf, to_replace)) != NULL)
+    {
+        memcpy(begin, buf, ptr - buf);
+        begin += ptr - buf;
+
+        memcpy(begin, replacement, strlen(replacement));
+        begin += strlen(replacement);
+
+        buf = ptr + strlen(to_replace);
+    }
+    strcpy(begin, buf);
+    strcpy(base, temp);
+}
+
 /**
  * Shell programs
 */
@@ -266,7 +286,7 @@ void clear()
 void change_dir(char *argv[], int argc)
 {
     char dest[BUFFER], current[BUFFER], *home;
-
+    replace_with(argv[1], "~", getenv("HOME"));
     strcpy(current, path());
 
     if (argc > 2)
@@ -275,7 +295,7 @@ void change_dir(char *argv[], int argc)
         return;
     }
 
-    if (argc == 1 || strcmp(argv[1], "~") == 0)
+    if (argc == 1)
     {
         if ((home = getenv("HOME")) == NULL)
         {
@@ -554,7 +574,7 @@ void copy(char *argv[], int argc)
  * find
 */
 
-bool match(char *str, char *pattern, int str_len, int pat_len)
+bool wild_card_search(char *str, char *pattern, int str_len, int pat_len)
 {
     if (pat_len == 0)
     {
@@ -619,7 +639,7 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
                 strcat(new_target, "/");
                 strcat(new_target, entry->d_name);
 
-                if ((match(entry->d_name, pattern, strlen(entry->d_name), strlen(pattern))))
+                if ((wild_card_search(entry->d_name, pattern, strlen(entry->d_name), strlen(pattern))))
                 {
                     if (is_dir(new_target) && dir_search)
                     {
@@ -694,7 +714,7 @@ void find(char *argv[], int argc)
 
     if (!(is_dir(path) && exists(path)))
     {
-        fprintf(stderr, HCYN "Unknown path to directory \n" RESET);
+        fprintf(stderr, RED "Unknown path to directory \n" RESET);
         return;
     }
 
