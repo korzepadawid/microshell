@@ -98,6 +98,7 @@ int main()
     clear();
     rl_bind_key('\t', rl_complete);
     strcat(prev_dir, getenv("OLDPWD"));
+
     while (true)
     {
         char *argv[BUFFER];
@@ -315,8 +316,9 @@ void help()
     printf(HELP_FORMAT, "history", "There will be a cool info.");
     printf(HELP_FORMAT, "tree", "There will be a cool info.");
     printf(HELP_FORMAT, "cp", "There will be a cool info.");
-    printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
-    printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
+    printf(HCYN "Developed by Dawid Korzepa © 2021\n" RESET);
+    printf(HCYN "UAM INFORMATYKA ST 2020-2024 " RESET);
+    printf("👌\n");
 }
 
 void clear()
@@ -342,7 +344,6 @@ void history()
 void change_dir(char *argv[], int argc)
 {
     char dest[BUFFER], current[BUFFER];
-    replace_with(argv[1], "~", home_dir());
     strcpy(current, path());
 
     if (argc > 2)
@@ -351,7 +352,7 @@ void change_dir(char *argv[], int argc)
         return;
     }
 
-    if (argc == 1)
+    if (argc == 1 || strcmp(argv[1], "~") == 0)
     {
         strcpy(dest, home_dir());
     }
