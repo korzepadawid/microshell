@@ -50,10 +50,10 @@
 
 void execute(char *argv[]);
 void replace_with(char *base, char *to_replace, char *replacement);
-const char *path();
-const char *user();
-const char *home_dir();
 void parse_args(char *argv[], int *argc, char *cmd);
+char *user();
+char *path();
+char *home_dir();
 bool exists(char *filename);
 bool is_dir(char *path);
 mode_t permissions_of(char *path);
@@ -65,7 +65,6 @@ mode_t permissions_of(char *path);
 void help();
 void clear();
 void history();
-void copy(char *argv[], int argc);
 void change_dir(char *argv[], int argc);
 
 /**
@@ -82,6 +81,7 @@ void tree(char *argv[], int argc);
 void copy_structure(char *source, char *destination);
 void copy_file(char *from, char *to);
 void copy_directory(char *from, char *to);
+void copy(char *argv[], int argc);
 
 /**
  * find
@@ -102,8 +102,10 @@ int main()
     {
         char *argv[BUFFER];
         char *cmd;
+        char *current_path = path();
+        replace_with(current_path, home_dir(), "~");
         int argc = 0;
-        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, path(), GREY, RESET);
+        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, current_path, GREY, RESET);
         cmd = readline("$ ");
 
         if (strlen(cmd) != 0)
@@ -163,29 +165,38 @@ int main()
  * Helpers
 */
 
-const char *user()
+void execute(char *argv[])
 {
-    register uid_t uid = geteuid();
-    register struct passwd *pw = getpwuid(uid);
-    if (pw == NULL)
+    int pid;
+    if ((pid = fork()) == 0)
     {
-        fprintf(stderr, "cannot get username.\n");
-        exit(EXIT_FAILURE);
+        execvp(argv[0], argv);
+        fprintf(stderr, RED "Unknown command, type help if you got lost\n" RESET);
+        exit(1);
     }
-
-    return pw->pw_name;
+    else
+    {
+        wait(NULL);
+    }
 }
 
-const char *path()
+void replace_with(char *base, char *to_replace, char *replacement)
 {
-    static char current_path[BUFFER];
-    getcwd(current_path, sizeof current_path);
-    if (current_path == NULL)
+    char temp[BUFSIZ], *buf = base, *ptr;
+    char *begin = &temp[0];
+
+    while ((ptr = strstr(buf, to_replace)) != NULL)
     {
-        fprintf(stderr, "cannot get path.\n");
-        exit(EXIT_FAILURE);
+        memcpy(begin, buf, ptr - buf);
+        begin += ptr - buf;
+
+        memcpy(begin, replacement, strlen(replacement));
+        begin += strlen(replacement);
+
+        buf = ptr + strlen(to_replace);
     }
-    return current_path;
+    strcpy(begin, buf);
+    strcpy(base, temp);
 }
 
 void parse_args(char *argv[], int *argc, char *cmd)
@@ -229,6 +240,41 @@ void parse_args(char *argv[], int *argc, char *cmd)
     argv[i] = NULL;
 }
 
+char *user()
+{
+    register uid_t uid = geteuid();
+    register struct passwd *pw = getpwuid(uid);
+    if (pw == NULL)
+    {
+        fprintf(stderr, "cannot get username.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    return pw->pw_name;
+}
+
+char *path()
+{
+    static char current_path[BUFFER];
+    getcwd(current_path, sizeof current_path);
+    if (current_path == NULL)
+    {
+        fprintf(stderr, "cannot get path.\n");
+        exit(EXIT_FAILURE);
+    }
+    return current_path;
+}
+
+char *home_dir()
+{
+    char *home;
+    if ((home = getenv("HOME")) == NULL)
+    {
+        home = getpwuid(getuid())->pw_dir;
+    }
+    return home;
+}
+
 bool exists(char *filename)
 {
     struct stat buffer;
@@ -255,38 +301,48 @@ mode_t permissions_of(char *path)
     return stat_buffer.st_mode;
 }
 
-void replace_with(char *base, char *to_replace, char *replacement)
-{
-    char temp[BUFSIZ], *buf = base, *ptr;
-    char *begin = &temp[0];
-
-    while ((ptr = strstr(buf, to_replace)) != NULL)
-    {
-        memcpy(begin, buf, ptr - buf);
-        begin += ptr - buf;
-
-        memcpy(begin, replacement, strlen(replacement));
-        begin += strlen(replacement);
-
-        buf = ptr + strlen(to_replace);
-    }
-    strcpy(begin, buf);
-    strcpy(base, temp);
-}
-
 /**
  * Shell programs
 */
+
+void help()
+{
+    printf(HELP_FORMAT, "clear", "There will be a cool info.");
+    printf(HELP_FORMAT, "help", "There will be a cool info.");
+    printf(HELP_FORMAT, "exit", "There will be a cool info.");
+    printf(HELP_FORMAT, "cd", "There will be a cool info.");
+    printf(HELP_FORMAT, "find", "There will be a cool info.");
+    printf(HELP_FORMAT, "history", "There will be a cool info.");
+    printf(HELP_FORMAT, "tree", "There will be a cool info.");
+    printf(HELP_FORMAT, "cp", "There will be a cool info.");
+    printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
+    printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
+}
 
 void clear()
 {
     printf("\e[1;1H\e[2J");
 }
 
+void history()
+{
+    register HIST_ENTRY **hist_array;
+    int i;
+    if ((hist_array = history_list()) == NULL)
+    {
+        fprintf(stderr, RED "Cannot get history\n" RESET);
+        return;
+    }
+    for (i = 0; hist_array[i]; i++)
+    {
+        printf(HISTORY_FORMAT, i + history_base, hist_array[i]->line);
+    }
+}
+
 void change_dir(char *argv[], int argc)
 {
-    char dest[BUFFER], current[BUFFER], *home;
-    replace_with(argv[1], "~", getenv("HOME"));
+    char dest[BUFFER], current[BUFFER];
+    replace_with(argv[1], "~", home_dir());
     strcpy(current, path());
 
     if (argc > 2)
@@ -297,11 +353,7 @@ void change_dir(char *argv[], int argc)
 
     if (argc == 1)
     {
-        if ((home = getenv("HOME")) == NULL)
-        {
-            home = getpwuid(getuid())->pw_dir;
-        }
-        strcpy(dest, home);
+        strcpy(dest, home_dir());
     }
     else if (strcmp(argv[1], "-") == 0)
     {
@@ -322,50 +374,6 @@ void change_dir(char *argv[], int argc)
     {
         strcpy(prev_dir, current);
     }
-}
-
-void execute(char *argv[])
-{
-    int pid;
-    if ((pid = fork()) == 0)
-    {
-        execvp(argv[0], argv);
-        fprintf(stderr, RED "Unknown command, type help if you got lost\n" RESET);
-        exit(1);
-    }
-    else
-    {
-        wait(NULL);
-    }
-}
-
-void history()
-{
-    register HIST_ENTRY **hist_array;
-    int i;
-    if ((hist_array = history_list()) == NULL)
-    {
-        fprintf(stderr, RED "Cannot get history\n" RESET);
-        return;
-    }
-    for (i = 0; hist_array[i]; i++)
-    {
-        printf(HISTORY_FORMAT, i + history_base, hist_array[i]->line);
-    }
-}
-
-void help()
-{
-    printf(HELP_FORMAT, "clear", "There will be a cool info.");
-    printf(HELP_FORMAT, "help", "There will be a cool info.");
-    printf(HELP_FORMAT, "exit", "There will be a cool info.");
-    printf(HELP_FORMAT, "cd", "There will be a cool info.");
-    printf(HELP_FORMAT, "find", "There will be a cool info.");
-    printf(HELP_FORMAT, "history", "There will be a cool info.");
-    printf(HELP_FORMAT, "tree", "There will be a cool info.");
-    printf(HELP_FORMAT, "cp", "There will be a cool info.");
-    printf(GRN "Developed by Dawid Korzepa © 2021\n" RESET);
-    printf(GRN "UAM INFORMATYKA ST 2020-2024\n" RESET);
 }
 
 /**
@@ -443,42 +451,6 @@ void tree(char *argv[], int argc)
  * copy
 */
 
-void copy_directory(char *from, char *to)
-{
-    umask(0);
-
-    int result = mkdir(to, permissions_of(from));
-    if (result < 0)
-    {
-        rmdir(to);
-        mkdir(to, permissions_of(from));
-    }
-}
-
-void copy_file(char *from, char *to)
-{
-    umask(0);
-
-    int fd_in, fd_out, bytes;
-    char buffer[BUFFER];
-
-    fd_in = open(from, O_RDONLY);
-    fd_out = open(to, O_RDWR | O_CREAT | O_EXCL, permissions_of(from));
-
-    if (fd_out < 0)
-    {
-        fd_out = creat(to, permissions_of(from));
-    }
-
-    while ((bytes = read(fd_in, &buffer, BUFFER)) > 0)
-    {
-        write(fd_out, &buffer, bytes);
-    }
-
-    close(fd_in);
-    close(fd_out);
-}
-
 void copy_structure(char *source, char *destination)
 {
     char temp_source[BUFFER], temp_destination[BUFFER];
@@ -514,6 +486,42 @@ void copy_structure(char *source, char *destination)
         }
     }
     closedir(dir);
+}
+
+void copy_file(char *from, char *to)
+{
+    umask(0);
+
+    int fd_in, fd_out, bytes;
+    char buffer[BUFFER];
+
+    fd_in = open(from, O_RDONLY);
+    fd_out = open(to, O_RDWR | O_CREAT | O_EXCL, permissions_of(from));
+
+    if (fd_out < 0)
+    {
+        fd_out = creat(to, permissions_of(from));
+    }
+
+    while ((bytes = read(fd_in, &buffer, BUFFER)) > 0)
+    {
+        write(fd_out, &buffer, bytes);
+    }
+
+    close(fd_in);
+    close(fd_out);
+}
+
+void copy_directory(char *from, char *to)
+{
+    umask(0);
+
+    int result = mkdir(to, permissions_of(from));
+    if (result < 0)
+    {
+        rmdir(to);
+        mkdir(to, permissions_of(from));
+    }
 }
 
 void copy(char *argv[], int argc)
