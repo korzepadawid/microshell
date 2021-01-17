@@ -5,7 +5,9 @@
 #include <pwd.h>
 #include <readline.h>
 #include <stdbool.h>
+#include <setjmp.h>
 #include <stdio.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/procfs.h>
@@ -91,6 +93,17 @@ bool wild_card_search(char *str, char *pattern, int str_len, int pat_len);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
 void find(char *argv[], int argc);
 
+/**
+ * signals
+*/
+
+static jmp_buf env;
+void sighanlder();
+
+/**
+ * globals
+*/
+
 char prev_dir[BUFFER];
 
 int main()
@@ -98,9 +111,16 @@ int main()
     clear();
     rl_bind_key('\t', rl_complete);
     strcat(prev_dir, getenv("OLDPWD"));
+    signal(SIGINT, sighanlder);
 
     while (true)
     {
+        if (setjmp(env) == 30)
+        {
+            printf("\n");
+            continue;
+        }
+
         char *argv[BUFFER];
         char *cmd;
         char *current_path = path();
@@ -728,4 +748,14 @@ void find(char *argv[], int argc)
     }
 
     find_recursively(path, pattern, dirs, files);
+}
+
+/**
+ * signals
+*/
+
+void sighanlder(int sig)
+{
+    signal(sig, sighanlder);
+    longjmp(env, 30);
 }
