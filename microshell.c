@@ -348,7 +348,7 @@ void help()
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [-d | -f]", "searches a folder hierarchy for files that meet desired criteria");
     printf(HCYN "Author:\n" RESET);
     printf("\tDeveloped by Dawid Korzepa\n");
-    printf("\tUAM INFORMATYKA ST 2020-2024\n ");
+    printf("\tUAM INFORMATYKA ST 2020-2024\n");
 }
 
 void clear()
@@ -378,7 +378,7 @@ void change_dir(char *argv[], int argc)
 
     if (argc > 2)
     {
-        fprintf(stderr, RED "Wrong format, use cd <directory>\n" RESET);
+        fprintf(stderr, RED "Wrong format, use cd [directory]\n" RESET);
         return;
     }
 
@@ -462,7 +462,7 @@ void tree(char *argv[], int argc)
     char target[BUFFER];
     if (argc > 2)
     {
-        fprintf(stderr, RED "Wrong format, tree or tree <target> \n" RESET);
+        fprintf(stderr, RED "Wrong format, tree or tree [directory] \n" RESET);
         return;
     }
 
@@ -560,7 +560,7 @@ void copy(char *argv[], int argc)
     char from[BUFFER], to[BUFFER];
     if (argc != 3)
     {
-        fprintf(stderr, RED "Wrong format, use cp <source> <destination> \n" RESET);
+        fprintf(stderr, RED "Wrong format, use cp [source] [destination] \n" RESET);
         return;
     }
 
@@ -747,7 +747,7 @@ void find(char *argv[], int argc)
 
     if (format_error)
     {
-        fprintf(stderr, RED "Wrong format, use find <path> -name <name> -type [df] or find <path> -name <name>\n" RESET);
+        fprintf(stderr, RED "Wrong format, use find [directory] [-name] [pattern] [-type] [-d | -f]\n" RESET);
         return;
     }
 
