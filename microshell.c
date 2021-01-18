@@ -99,26 +99,33 @@ void find(char *argv[], int argc);
 */
 
 static jmp_buf env;
-void sighanlder();
+void sigint_handler();
+void sigtstp_handler();
 
 /**
  * globals
 */
 
 char prev_dir[BUFFER];
+bool is_paused;
+bool executing;
 
 int main()
 {
     clear();
     rl_bind_key('\t', rl_complete);
     strcat(prev_dir, getenv("OLDPWD"));
-    signal(SIGINT, sighanlder);
+    signal(SIGINT, sigint_handler);
+    signal(SIGTSTP, sigtstp_handler);
+
+    is_paused = false;
 
     while (true)
     {
         if (setjmp(env) == 30)
         {
             printf("\n");
+            executing = false;
             continue;
         }
 
@@ -141,7 +148,12 @@ int main()
         {
             continue;
         }
-        else if (strcmp(argv[0], EXIT) == 0)
+        else
+        {
+            executing = true;
+        }
+
+        if (strcmp(argv[0], EXIT) == 0)
         {
             exit(0);
         }
@@ -177,6 +189,7 @@ int main()
         {
             execute(argv);
         }
+        executing = false;
         free(cmd);
     }
 
@@ -764,8 +777,30 @@ void find(char *argv[], int argc)
  * signals
 */
 
-void sighanlder(int sig)
+void sigint_handler()
 {
-    signal(sig, sighanlder);
+    signal(SIGINT, sigint_handler);
     longjmp(env, 30);
+}
+
+void sigtstp_handler()
+{
+    if (executing)
+    {
+        is_paused = !is_paused;
+        if (is_paused)
+        {
+            signal(SIGTSTP, sigtstp_handler);
+            pause();
+        }
+        else
+        {
+            signal(SIGTSTP, sigtstp_handler);
+        }
+    }
+    else
+    {
+        signal(SIGTSTP, sigtstp_handler);
+        longjmp(env, 30);
+    }
 }
