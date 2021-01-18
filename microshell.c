@@ -37,7 +37,8 @@
 #define CYN "\e[0;36m"
 #define RESET "\x1B[0m"
 
-#define HELP_FORMAT "%-9s %s \n"
+#define HELP_FORMAT "\t%-9s %-30s %s \n"
+#define HELP_FORMAT2 "\t%-9s %s \n"
 #define HISTORY_FORMAT "%-3d %s \n"
 
 #define BUFFER 1024
@@ -328,17 +329,26 @@ mode_t permissions_of(char *path)
 
 void help()
 {
-    printf(HELP_FORMAT, "clear", "There will be a cool info.");
-    printf(HELP_FORMAT, "help", "There will be a cool info.");
-    printf(HELP_FORMAT, "exit", "There will be a cool info.");
-    printf(HELP_FORMAT, "cd", "There will be a cool info.");
-    printf(HELP_FORMAT, "find", "There will be a cool info.");
-    printf(HELP_FORMAT, "history", "There will be a cool info.");
-    printf(HELP_FORMAT, "tree", "There will be a cool info.");
-    printf(HELP_FORMAT, "cp", "There will be a cool info.");
-    printf(HCYN "Developed by Dawid Korzepa © 2021\n" RESET);
-    printf(HCYN "UAM INFORMATYKA ST 2020-2024 " RESET);
-    printf("👌\n");
+    printf(HCYN "Features:\n" RESET);
+    printf("\tdouble-quoted params\n");
+    printf("\tcolors\n");
+    printf("\tuser name in prompt\n");
+    printf("\thistory\n");
+    printf("\ttab autocompletion\n");
+    printf("\tup/down arrow key to switch between previously executed commands\n");
+    printf("\t^C support \n");
+    printf(HCYN "Supported commands:\n" RESET);
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "clear", "clear", "clears the terminal screen");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "cd", "cd [directory]", "changes the current working directory");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "exit", "exit", "causes the shell to exit");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "help", "help", "displays informations about shell features and author");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "history", "history", "displays previously executed commands");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "tree", "tree [directory]", "recursively lists directories and subdirectories");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "cp", "cp [source] [destination]", "recursively copies directories and files, with their permissions");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [-d | -f]", "searches a folder hierarchy for files that meet desired criteria");
+    printf(HCYN "Author:\n" RESET);
+    printf("\tDeveloped by Dawid Korzepa\n");
+    printf("\tUAM INFORMATYKA ST 2020-2024\n ");
 }
 
 void clear()
