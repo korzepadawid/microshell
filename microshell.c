@@ -350,6 +350,7 @@ void help()
     printf("\ttab autocompletion\n");
     printf("\tup/down arrow key to switch between previously executed commands\n");
     printf("\t^C support \n");
+    printf("\t^Z support \n");
     printf(HCYN "Supported commands:\n" RESET);
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "clear", "clear", "clears the terminal screen");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cd", "cd [directory]", "changes the current working directory");
