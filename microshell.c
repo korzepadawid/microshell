@@ -346,7 +346,7 @@ char *branch_name()
         dup2(dev_null, 2);
         close(pipe_fd[0]);
         close(pipe_fd[1]);
-        execlp("git", "git", "branch", "--show-current", NULL);
+        execlp("git", "git", "symbolic-ref", "--short", "HEAD", NULL);
         exit(EXIT_FAILURE);
     }
     else
