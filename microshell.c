@@ -52,7 +52,7 @@
 #define QUOTES 1
 #define WORD 2
 
-#define MAX_GIT_BRANCH_LENGTH 40
+#define MAX_GIT_BRANCH_LENGTH 28
 
 /**
  * Helpers
@@ -420,6 +420,7 @@ void help()
     printf("\tup/down arrow key to switch between previously executed commands\n");
     printf("\t^C support \n");
     printf("\t^Z support \n");
+    printf("\tcurrent git branch in prompt (ver. 1.7+) \n");
     printf(HCYN "Supported commands:\n" RESET);
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "clear", "clear", "clears the terminal screen");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cd", "cd [directory]", "changes the current working directory");
