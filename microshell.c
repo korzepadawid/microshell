@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 600
 #include <dirent.h>
 #include <errno.h>
 #include <history.h>
@@ -27,9 +28,13 @@
 #define FIND "find"
 #define CHANGE_DIR "cd"
 
+#define HGRN "\e[0;92m"
 #define MAG "\e[0;35m"
+#define LMAG "\e[0;95m"
 #define RED "\x1B[31m"
 #define GRN "\x1B[32m"
+#define BLU "\e[0;94m"
+#define LRED "\e[0;91m"
 #define HCYN "\e[0;96m"
 #define GREY "\x1B[90m"
 #define YEL "\e[0;33m"
@@ -47,6 +52,8 @@
 #define QUOTES 1
 #define WORD 2
 
+#define MAX_GIT_BRANCH_LENGTH 40
+
 /**
  * Helpers
 */
@@ -57,6 +64,7 @@ void parse_args(char *argv[], int *argc, char *cmd);
 char *user();
 char *path();
 char *home_dir();
+char *branch_name();
 bool exists(char *filename);
 bool is_dir(char *path);
 mode_t permissions_of(char *path);
@@ -119,6 +127,7 @@ int main()
     signal(SIGTSTP, sigtstp_handler);
 
     is_paused = false;
+    char *branch = branch_name();
 
     while (true)
     {
@@ -134,7 +143,17 @@ int main()
         char *current_path = path();
         replace_with(current_path, home_dir(), "~");
         int argc = 0;
-        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, current_path, GREY, RESET);
+        printf("%s[%s%s%s:%s%s%s]%s ", GREY, LMAG, user(), MAG, HCYN, current_path, GREY, RESET);
+
+        if (strlen(branch) > 1)
+        {
+            printf("%sgit→(%s%s%s)%s\n", BLU, LRED, branch, BLU, RESET);
+        }
+        else
+        {
+            printf("\n");
+        }
+
         cmd = readline("$ ");
 
         if (strlen(cmd) != 0)
@@ -190,6 +209,7 @@ int main()
             execute(argv);
         }
         executing = false;
+        branch = branch_name();
         free(cmd);
     }
 
@@ -308,6 +328,55 @@ char *home_dir()
         home = getpwuid(getuid())->pw_dir;
     }
     return home;
+}
+
+char *branch_name()
+{
+    int pipe_fd[2];
+    pid_t pid;
+    char *branch = (char *)malloc(sizeof(char) * (BUFSIZ + 1));
+    pipe(pipe_fd);
+
+    pid = fork();
+    int dev_null = open("/dev/null", O_WRONLY);
+
+    if (pid == 0)
+    {
+        dup2(pipe_fd[1], 1);
+        dup2(dev_null, 2);
+        close(pipe_fd[0]);
+        close(pipe_fd[1]);
+        execlp("git", "git", "branch", "--show-current", NULL);
+        exit(EXIT_FAILURE);
+    }
+    else
+    {
+        close(pipe_fd[1]);
+        read(pipe_fd[0], branch, BUFSIZ);
+        wait(NULL);
+    }
+
+    int branch_length = strlen(branch);
+    int i;
+    for (i = 0; i < branch_length; i++)
+    {
+        if (!isascii(branch[i]))
+        {
+            return "\0";
+        }
+
+        if (branch[i] == '\n')
+        {
+            branch[i] = '\0';
+        }
+    }
+
+    if (branch_length > MAX_GIT_BRANCH_LENGTH)
+    {
+        return "\0";
+    }
+
+    return branch;
 }
 
 bool exists(char *filename)
