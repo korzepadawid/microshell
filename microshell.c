@@ -27,18 +27,14 @@
 #define FIND "find"
 #define CHANGE_DIR "cd"
 
-#define MAG "\e[0;35m"
 #define RED "\x1B[31m"
-#define GRN "\x1B[32m"
-#define HCYN "\e[0;96m"
+#define GREEN "\x1B[32m"
 #define GREY "\x1B[90m"
-#define YEL "\e[0;33m"
-#define REDB "\e[41m"
-#define CYN "\e[0;36m"
+#define MAGENTA "\e[0;35m"
+#define YELLOW "\e[0;33m"
+#define CYAN "\e[0;96m"
 #define RESET "\x1B[0m"
 
-#define HELP_FORMAT "\t%-9s %-30s %s \n"
-#define HELP_FORMAT2 "\t%-9s %s \n"
 #define HISTORY_FORMAT "%-3d %s \n"
 
 #define BUFFER 1024
@@ -138,7 +134,7 @@ int main()
         char *current_path = path();
         replace_with(current_path, home_dir(), "~");
         int argc = 0;
-        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAG, GRN, current_path, GREY, RESET);
+        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAGENTA, GREEN, current_path, GREY, RESET);
         cmd = readline("$ ");
 
         if (strlen(cmd) != 0)
@@ -332,7 +328,7 @@ mode_t permissions_of(char *path)
 {
     struct stat stat_buffer;
 
-    if (stat(path, &stat_buffer) == -1)
+    if (stat(path, &stat_buffer) < 0)
     {
         fprintf(stderr, RED "Cannot get permissions. \n" RESET);
         exit(EXIT_FAILURE);
@@ -347,7 +343,7 @@ mode_t permissions_of(char *path)
 
 void help()
 {
-    printf(HCYN "Features:\n" RESET);
+    printf(CYAN "Features:\n" RESET);
     printf("\tdouble-quoted params\n");
     printf("\tcolors\n");
     printf("\tuser name in prompt\n");
@@ -356,7 +352,7 @@ void help()
     printf("\tup/down arrow key to switch between previously executed commands\n");
     printf("\t^C support \n");
     printf("\t^Z support \n");
-    printf(HCYN "Supported commands:\n" RESET);
+    printf(CYAN "Supported commands:\n" RESET);
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "clear", "clear", "clears the terminal screen");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cd", "cd [directory]", "changes the current working directory");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "exit", "exit", "causes the shell to exit");
@@ -365,7 +361,7 @@ void help()
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "tree", "tree [directory]", "recursively lists directories and subdirectories");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cp", "cp [source] [destination]", "recursively copies directories and files, with their permissions");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [-d | -f]", "searches a folder hierarchy for files that meet desired criteria");
-    printf(HCYN "Author:\n" RESET);
+    printf(CYAN "Author:\n" RESET);
     printf("\tDeveloped by Dawid Korzepa\n");
     printf("\tUAM INFORMATYKA ST 2020-2024\n");
 }
@@ -424,77 +420,6 @@ void change_dir(char *argv[], int argc)
     {
         strcpy(prev_dir, current);
     }
-}
-
-/**
- * tree
-*/
-
-void print_nodes(char *node, int j)
-{
-    struct dirent *entry;
-    DIR *dir;
-
-    if (((dir = opendir(node)) == NULL) && (j == 0))
-    {
-        fprintf(stderr, RED "Unknown path\n" RESET);
-        return;
-    }
-
-    if (dir)
-    {
-        while ((entry = readdir(dir)) != NULL)
-        {
-            if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0) && (entry->d_name[0] != '.'))
-            {
-                int i;
-                for (i = 0; i < j; i++)
-                {
-                    if (i % 2 == 0)
-                    {
-                        printf("%s", "|");
-                    }
-                    else
-                    {
-                        printf("\t");
-                    }
-                }
-
-                printf("%s%s%s%s\n", "|--", entry->d_type == 4 ? YEL : RESET, entry->d_name, RESET);
-
-                char target[BUFFER];
-
-                strcpy(target, node);
-                strcat(target, "/");
-                strcat(target, entry->d_name);
-
-                print_nodes(target, j + 2);
-            }
-        }
-    }
-
-    closedir(dir);
-}
-
-void tree(char *argv[], int argc)
-{
-    char target[BUFFER];
-    if (argc > 2)
-    {
-        fprintf(stderr, RED "Wrong format, tree or tree [directory] \n" RESET);
-        return;
-    }
-
-    if (argc == 1)
-    {
-        strcpy(target, path());
-    }
-    else
-    {
-        strcpy(target, argv[1]);
-    }
-
-    print_nodes(target, 0);
 }
 
 /**
@@ -708,7 +633,7 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
                 {
                     if (is_dir(new_target) && dir_search)
                     {
-                        printf(YEL "%s\n" RESET, new_target);
+                        printf(YELLOW "%s\n" RESET, new_target);
                     }
 
                     if (!is_dir(new_target) && exists(new_target) && file_search)
