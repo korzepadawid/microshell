@@ -67,13 +67,6 @@ void history();
 void change_dir(char *argv[], int argc);
 
 /**
- * tree
-*/
-
-void print_nodes(char *node, int j);
-void tree(char *argv[], int argc);
-
-/**
  * copy
 */
 
