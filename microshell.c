@@ -90,7 +90,11 @@ void copy(char *argv[], int argc);
  * find
 */
 
-bool wild_card_search(char *str, char *pattern, int str_len, int pat_len);
+/**
+* Krauss wildcard-matching algorithm
+*/
+
+bool wild_card_search(char *str, char *pattern);
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search);
 void find(char *argv[], int argc);
 
@@ -98,7 +102,7 @@ void find(char *argv[], int argc);
  * signals
 */
 
-static jmp_buf env;
+jmp_buf env;
 void sigint_handler();
 void sigtstp_handler();
 
@@ -217,7 +221,7 @@ void execute(char *argv[])
 
 void replace_with(char *base, char *to_replace, char *replacement)
 {
-    char temp[BUFSIZ], *buf = base, *ptr;
+    char temp[BUFFER], *buf = base, *ptr;
     char *begin = &temp[0];
 
     while ((ptr = strstr(buf, to_replace)) != NULL)
@@ -230,6 +234,7 @@ void replace_with(char *base, char *to_replace, char *replacement)
 
         buf = ptr + strlen(to_replace);
     }
+
     strcpy(begin, buf);
     strcpy(base, temp);
 }
@@ -627,26 +632,33 @@ void copy(char *argv[], int argc)
  * find
 */
 
-bool wild_card_search(char *str, char *pattern, int str_len, int pat_len)
+/**
+* Krauss wildcard-matching algorithm
+*/
+
+bool wild_card_search(char *base, char *pattern)
 {
-    if (pat_len == 0)
+    int base_length = strlen(base);
+    int pattern_length = strlen(pattern);
+
+    if (pattern_length == 0)
     {
-        return (str_len == 0);
+        return (base_length == 0);
     }
 
-    bool search[str_len + 1][pat_len + 1];
+    bool search[base_length + 1][pattern_length + 1];
     int i, j;
 
-    for (i = 0; i <= str_len; i++)
+    for (i = 0; i <= base_length; i++)
     {
-        for (j = 0; j <= pat_len; j++)
+        for (j = 0; j <= pattern_length; j++)
         {
             search[i][j] = false;
         }
     }
 
     search[0][0] = true;
-    for (j = 1; j <= pat_len; j++)
+    for (j = 1; j <= pattern_length; j++)
     {
         if (pattern[j - 1] == '*')
         {
@@ -654,15 +666,15 @@ bool wild_card_search(char *str, char *pattern, int str_len, int pat_len)
         }
     }
 
-    for (i = 1; i <= str_len; i++)
+    for (i = 1; i <= base_length; i++)
     {
-        for (j = 1; j <= pat_len; j++)
+        for (j = 1; j <= pattern_length; j++)
         {
             if (pattern[j - 1] == '*')
             {
                 search[i][j] = search[i][j - 1] || search[i - 1][j];
             }
-            else if (pattern[j - 1] == '?' || str[i - 1] == pattern[j - 1])
+            else if (pattern[j - 1] == '?' || base[i - 1] == pattern[j - 1])
             {
                 search[i][j] = search[i - 1][j - 1];
             }
@@ -673,7 +685,7 @@ bool wild_card_search(char *str, char *pattern, int str_len, int pat_len)
         }
     }
 
-    return search[str_len][pat_len];
+    return search[base_length][pattern_length];
 }
 
 void find_recursively(char *path, char *pattern, bool dir_search, bool file_search)
@@ -692,7 +704,7 @@ void find_recursively(char *path, char *pattern, bool dir_search, bool file_sear
                 strcat(new_target, "/");
                 strcat(new_target, entry->d_name);
 
-                if ((wild_card_search(entry->d_name, pattern, strlen(entry->d_name), strlen(pattern))))
+                if ((wild_card_search(entry->d_name, pattern)))
                 {
                     if (is_dir(new_target) && dir_search)
                     {
