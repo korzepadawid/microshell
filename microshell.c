@@ -20,7 +20,6 @@
 
 #define EXIT "exit"
 #define HELP "help"
-#define TREE "tree"
 #define CLEAR "clear"
 #define HISTORY "history"
 #define COPY "cp"
@@ -169,10 +168,6 @@ int main()
         else if (strcmp(argv[0], COPY) == 0)
         {
             copy(argv, argc);
-        }
-        else if (strcmp(argv[0], TREE) == 0)
-        {
-            tree(argv, argc);
         }
         else if (strcmp(argv[0], CHANGE_DIR) == 0)
         {
