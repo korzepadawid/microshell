@@ -30,6 +30,7 @@
 #define GREEN "\x1B[32m"
 #define GREY "\x1B[90m"
 #define MAGENTA "\e[0;35m"
+#define LIGHT_MAGENTA "\e[0;95m"
 #define YELLOW "\e[0;33m"
 #define CYAN "\e[0;96m"
 #define RESET "\x1B[0m"
@@ -126,7 +127,7 @@ int main()
         char *current_path = path();
         replace_with(current_path, home_dir(), "~");
         int argc = 0;
-        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, RED, user(), MAGENTA, GREEN, current_path, GREY, RESET);
+        printf("%s[%s%s%s:%s%s%s]%s\n", GREY, LIGHT_MAGENTA, user(), MAGENTA, CYAN, current_path, GREY, RESET);
         cmd = readline("$ ");
 
         if (strlen(cmd) != 0)
@@ -307,9 +308,9 @@ bool exists(char *filename)
 
 bool is_dir(char *path)
 {
-    struct stat buf;
-    stat(path, &buf);
-    return S_ISDIR(buf.st_mode);
+    struct stat stat_buf;
+    stat(path, &stat_buf);
+    return S_ISDIR(stat_buf.st_mode);
 }
 
 mode_t permissions_of(char *path)
@@ -331,7 +332,7 @@ mode_t permissions_of(char *path)
 
 void help()
 {
-    printf(CYAN "Features:\n" RESET);
+    printf(GREEN "Features:\n" RESET);
     printf("\tdouble-quoted params\n");
     printf("\tcolors\n");
     printf("\tuser name in prompt\n");
@@ -340,16 +341,15 @@ void help()
     printf("\tup/down arrow key to switch between previously executed commands\n");
     printf("\t^C support \n");
     printf("\t^Z support \n");
-    printf(CYAN "Supported commands:\n" RESET);
+    printf(GREEN "Supported commands:\n" RESET);
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "clear", "clear", "clears the terminal screen");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cd", "cd [directory]", "changes the current working directory");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "exit", "exit", "causes the shell to exit");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "help", "help", "displays informations about shell features and author");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "history", "history", "displays previously executed commands");
-    printf("\t%s:\n\t\t%s\n\t\t%s\n", "tree", "tree [directory]", "recursively lists directories and subdirectories");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cp", "cp [source] [destination]", "recursively copies directories and files, with their permissions");
-    printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [-d | -f]", "searches a folder hierarchy for files that meet desired criteria");
-    printf(CYAN "Author:\n" RESET);
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [d | f]", "searches a folder hierarchy for files that meet desired criteria");
+    printf(GREEN "Author:\n" RESET);
     printf("\tDeveloped by Dawid Korzepa\n");
     printf("\tUAM INFORMATYKA ST 2020-2024\n");
 }
