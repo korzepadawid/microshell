@@ -686,7 +686,7 @@ void find(char *argv[], int argc)
 
     if (format_error)
     {
-        fprintf(stderr, RED "Wrong format, use find [directory] [-name] [pattern] [-type] [-d | -f]\n" RESET);
+        fprintf(stderr, RED "Wrong format, use find [directory] [-name] [pattern] [-type] [d | f]\n" RESET);
         return;
     }
 
@@ -694,6 +694,13 @@ void find(char *argv[], int argc)
     {
         fprintf(stderr, RED "Unknown path to directory \n" RESET);
         return;
+    }
+
+    int path_length = strlen(path);
+
+    if (path[path_length - 1] == '/')
+    {
+        path[path_length - 1] = '\0';
     }
 
     find_recursively(path, pattern, dirs, files);
