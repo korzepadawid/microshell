@@ -1,3 +1,8 @@
+/**
+ * Compilation
+ * $ gcc -ansi -Wall -o microshell microshell.c -I/usr/include/readline -lreadline
+*/
+
 #include <dirent.h>
 #include <errno.h>
 #include <history.h>
@@ -348,7 +353,7 @@ void help()
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "help", "help", "displays informations about shell features and author");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "history", "history", "displays previously executed commands");
     printf("\t%s:\n\t\t%s\n\t\t%s\n", "cp", "cp [source] [destination]", "recursively copies directories and files, with their permissions");
-    printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [d | f]", "searches a folder hierarchy for files that meet desired criteria");
+    printf("\t%s:\n\t\t%s\n\t\t%s\n", "find", "find [directory] [-name] [pattern] [-type] [d | f]", "searches a folder hierarchy for files that meet desired criteria, pattern supports Krauss wildcard-matching algorithm (?*) ");
     printf(GREEN "Author:\n" RESET);
     printf("\tDeveloped by Dawid Korzepa\n");
     printf("\tUAM INFORMATYKA ST 2020-2024\n");
