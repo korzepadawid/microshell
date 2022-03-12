@@ -1,4 +1,4 @@
-# microshell.c
+# unix-shell
 ## Instalacja
 ```
 $ sudo apt-get install libreadline-dev
