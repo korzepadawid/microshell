@@ -17,10 +17,10 @@ $ ./microshell
 
 ## Description
 
-- Developed support for double-quoted params, command history, TAB autocompletion, and up/down arrow keys to switch between previously executed commands.
+- Developed support for double-quoted params, command history, tab autocompletion, and up/down arrow keys to switch between previously executed commands.
 - Handled SIGINT and SIGSTP signals.
-- Implemented Krauss wildcard-matching algorithm, and used it in my own (recursive) implementation of the “find” command.
-- Created my own (recursive) version of the "cp" command.
+- Implemented Krauss wildcard-matching algorithm, and used it in my own (recursive) implementation of the `find` command.
+- Created my own (recursive) version of the `cp` command.
 
 ## Help
 Have you got lost? Use `help`.
