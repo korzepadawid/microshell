@@ -1,5 +1,8 @@
-# unix-shell
-## Instalacja
+# microshell
+
+A shell for UNIX-based operating systems.
+
+## How to run?
 ```
 $ sudo apt-get install libreadline-dev
 ```
@@ -11,22 +14,46 @@ $ make
 ```
 $ ./microshell
 ```
-## Polecenie
 
-Zadanie polega na wykorzystaniu języka ANSI C do napisania prostego programu powłoki – Microshell. Program ten powinien przyjmować na wejściu polecenia, a następnie wykonywać działania zgodne z ich treścia. Powłoka powinna:
+## Description
 
-- wyświetlać znak zachęty w postaci [{path}] $, gdzie {path} jest scieżką do bieżącego katalogu roboczego
+- Developed support for double-quoted params, command history, TAB autocompletion, and up/down arrow keys to switch between previously executed commands.
+- Handled SIGINT and SIGSTP signals.
+- Implemented Krauss wildcard-matching algorithm, and used it in my own (recursive) implementation of the “find” command.
+- Created my own (recursive) version of the "cp" command.
 
-- obsługiwać polecenie cd, działające analogicznie do tego znanego nam z powłoki bash
-
-- obsługiwać polecenie exit, kończące działanie programu powłoki
-
-- obsługiwać polecenie help, wyświetlające na ekranie informacje o autorze programu i oferowanych przez niego funkcjonalnościach
-
-- obsługiwać dwa inne, dowolnie wybrane polecenia powłoki (chodzi tutaj np. o własną, samodzielną, prostą implementację dwóch poleceń)
-
-- przyjmować polecenia odwołujące się przez nazwę do skryptow i programów znajdujacych się w katalogach opisanych wartoscią zmiennej środowiskowej PATH oraz umożliwiać wywołanie tych skryptów i programów z argumentami
-
-- wypisywać komunikat błędu, gdy niemożliwe jest poprawne zinterpretowanie polecenia
-
-- posiadać tzw. dodatkowe bajery (w zależności od stopnia skomplikowania problemu), np. wyświetlanie loginu aktualnie zalogowanego użytkownika, obsługę kolorów, obsługę argumentów w cudzysłowach, sensowną obsługę sygnałów (np. Ctrl+Z), obsługę historii poleceń, uzupełnianie składni, itp.
+## Help
+Have you got lost? Use `help`.
+```
+Features:
+        double-quoted params
+        colors
+        user name in prompt
+        history
+        tab autocompletion
+        up/down arrow key to switch between previously executed commands
+        ^C support 
+        ^Z support
+Supported commands:
+        clear:
+                clear
+                clears the terminal screen
+        cd:
+                cd [directory]
+                changes the current working directory
+        exit:
+                exit
+                causes the shell to exit
+        help:
+                help
+                displays informations about shell features and author
+        history:
+                history
+                displays previously executed commands
+        cp:
+                cp [source] [destination]
+                recursively copies directories and files, with their permissions
+        find:
+                find [directory] [-name] [pattern] [-type] [d | f]
+                searches a folder hierarchy for files that meet desired criteria, pattern supports Krauss wildcard-matching algorithm (?*)
+```
